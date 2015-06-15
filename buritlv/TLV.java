@@ -27,6 +27,47 @@ package buritlv;
  *
  * @author buri
  */
-public class TLV {
+public final class TLV {
+    
+    private static final int MAX_VALUE_LENGTH = 65535;//32767*2;
+    private static final int MAX_TAG_LENGTH = 127;//7F;
+    
+    private int tag;
+    private int length;
+    private byte[] value;
+    
+    private TLV next;
+    private TLV child;
+    
+    private boolean isCdo;
+    
+    /**
+     * Constructor
+     * @param tag tag value, must be lower then 128 
+     * @param value byte array, can be null and length must be lower then 65535
+     * @param isCdo boolean, true if CDO, false otherwise
+     * @throws IllegalArgumentException if tag or value length is greater then allowed
+     */
+    public TLV(int tag, byte[] value, boolean isCdo) throws IllegalArgumentException {
+        if(tag > MAX_TAG_LENGTH)
+            throw new IllegalArgumentException("Tag value greater then " + MAX_TAG_LENGTH);
+        if(value != null && value.length > MAX_VALUE_LENGTH)
+            throw new IllegalArgumentException("Value length greater then " + MAX_VALUE_LENGTH);
+        this.isCdo = isCdo;
+        this.tag = tag;
+        this.value = value;
+    }
+    
+    /**
+     * Constructor
+     * @param tag tag value, must be lower then 128 
+     * @param value string, can be null and length must be lower then 65535
+     * @param isCdo boolean, true if CDO, false otherwise
+     * @throws IllegalArgumentException if tag or value length is greater then allowed
+     */
+    public TLV (int tag, String value, boolean isCdo) throws IllegalArgumentException {
+        this (tag, TlvUtil.ToByteArray(value), isCdo);
+    }
     
 }
+
