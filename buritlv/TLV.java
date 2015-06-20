@@ -23,51 +23,140 @@
  */
 package buritlv;
 
+import java.nio.charset.Charset;
+
 /**
  *
  * @author buri
  */
 public final class TLV {
-    
+
     private static final int MAX_VALUE_LENGTH = 65535;//32767*2;
     private static final int MAX_TAG_LENGTH = 127;//7F;
-    
+    private static final Charset UTF8_CHARSET = Charset.forName("UTF-8");
+    public static final boolean PDO = false;
+    public static final boolean CDO = true;
+
     private int tag;
     private int length;
     private byte[] value;
-    
+
     private TLV next;
     private TLV child;
-    
+
     private boolean isCdo;
-    
+
     /**
-     * Constructor
-     * @param tag tag value, must be lower then 128 
+     * Constructor, creates a new TLV object
+     *
+     * @param tag tag value, must be lower then 128
      * @param value byte array, can be null and length must be lower then 65535
      * @param isCdo boolean, true if CDO, false otherwise
-     * @throws IllegalArgumentException if tag or value length is greater then allowed
+     * @throws IllegalArgumentException if tag or value length is greater then
+     * allowed
      */
     public TLV(int tag, byte[] value, boolean isCdo) throws IllegalArgumentException {
-        if(tag > MAX_TAG_LENGTH)
+        if (tag > MAX_TAG_LENGTH) {
             throw new IllegalArgumentException("Tag value greater then " + MAX_TAG_LENGTH);
-        if(value != null && value.length > MAX_VALUE_LENGTH)
+        }
+        if (value != null && value.length > MAX_VALUE_LENGTH) {
             throw new IllegalArgumentException("Value length greater then " + MAX_VALUE_LENGTH);
+        }
+
         this.isCdo = isCdo;
         this.tag = tag;
         this.value = value;
     }
     
     /**
-     * Constructor
-     * @param tag tag value, must be lower then 128 
-     * @param value string, can be null and length must be lower then 65535
-     * @param isCdo boolean, true if CDO, false otherwise
-     * @throws IllegalArgumentException if tag or value length is greater then allowed
+     * Creates a new TLV of CDO type with tag number
+     * @param tag tag to set
+     * @return new TLV of CDO type
      */
-    public TLV (int tag, String value, boolean isCdo) throws IllegalArgumentException {
-        this (tag, TlvUtil.ToByteArray(value), isCdo);
+    public static TLV newCDO(int tag){
+        return new TLV(tag, null, true);
     }
     
-}
+    /**
+     * Getter for isCDO
+     * @return true if the TLV is PDO, false otherwise
+     */
+    public boolean isCDO(){
+        return this.isCdo;
+    }
+    
+    /**
+     * Getter for tag
+     * @return the tag number, positive number between 0 and 127
+     * (inclusive 0 and 127)
+     */
+    public int getTag(){
+        return this.tag;
+    }
+    
+    /**
+     * Getter for value
+     * @return byte array or null
+     */
+    public byte[] getValue(){
+        return this.value;
+    }
+    
+    /**
+     * Creates a new TLV of PDO type with tag number and value
+     * @param tag tag number to set
+     * @param value byte array or null to set
+     * @return new TLV of PDO type
+     */
+    public static TLV newPDO(int tag, byte[] value){
+        return new TLV(tag, value, false);
+    }
+    
+    /**
+     * Creates a new TLV of PDO type with tag number and value
+     * @param tag tag number to set
+     * @param value string or null to set
+     * @return new TLV of PDO type
+     */
+    public static TLV newPDO(int tag, String value){
+        return newPDO(tag, encodeUTF8(value));
+    }
+    
+    // // // // // // // // // // // // // // // // // // // // // // // //
 
+    /**
+     * Adds a child to this TLV object
+     * Current child will be replaced
+     * @param tlv TLV object or null
+     */
+    public void addChild(TLV tlv){
+        this.child = tlv;
+    }
+    ///////////////////////////////////////////////////////////////////////////
+
+     /**
+     * Converts a a byte array to UTF-8 string
+     *
+     * @param bytes byte array to convert
+     * @return converted string or null if argument is null
+     * if the byte array is not null but has zero length an empty string 
+     * will be returned
+     */
+    public static String decodeUTF8(byte[] bytes) {
+        if(bytes == null) return null;
+        return new String(bytes, UTF8_CHARSET);
+    }
+
+     /**
+     * Converts a UTF-8 string to a byte array
+     *
+     * @param value string to convert
+     * @return byte array
+     *          or null if argument is null
+     *          or empty array if string is empty
+     */
+    public static byte[] encodeUTF8(String value) {
+        if (value == null) return null;
+        return value.getBytes(UTF8_CHARSET);
+    }
+}
