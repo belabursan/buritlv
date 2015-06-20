@@ -66,15 +66,43 @@ public final class TLV {
         this.isCdo = isCdo;
         this.tag = tag;
         this.value = value;
+        this.next = null;
+        this.child = null;
     }
     
     /**
      * Creates a new TLV of CDO type with tag number
      * @param tag tag to set
      * @return new TLV of CDO type
+     * @throws IllegalArgumentException if tag or value length is greater then
+     * allowed
      */
-    public static TLV newCDO(int tag){
+    public static TLV newCDO(int tag) throws IllegalArgumentException {
         return new TLV(tag, null, true);
+    }
+    
+    /**
+     * Creates a new TLV of PDO type with tag number and value
+     * @param tag tag number to set
+     * @param value byte array or null to set
+     * @return new TLV of PDO type
+     * @throws IllegalArgumentException if tag or value length is greater then
+     * allowed
+     */
+    public static TLV newPDO(int tag, byte[] value) throws IllegalArgumentException {
+        return new TLV(tag, value, false);
+    }
+    
+    /**
+     * Creates a new TLV of PDO type with tag number and value
+     * @param tag tag number to set
+     * @param value string or null to set
+     * @return new TLV of PDO type
+     * @throws IllegalArgumentException if tag or value length is greater then
+     * allowed
+     */
+    public static TLV newPDO(int tag, String value) throws IllegalArgumentException {
+        return newPDO(tag, encodeUTF8(value));
     }
     
     /**
@@ -101,27 +129,41 @@ public final class TLV {
     public byte[] getValue(){
         return this.value;
     }
-    
+
     /**
-     * Creates a new TLV of PDO type with tag number and value
-     * @param tag tag number to set
-     * @param value byte array or null to set
-     * @return new TLV of PDO type
+     * Getter for child
+     * @return TLV object corresponding the direct child
      */
-    public static TLV newPDO(int tag, byte[] value){
-        return new TLV(tag, value, false);
+    public TLV getChild(){
+        return this.child;
     }
     
     /**
-     * Creates a new TLV of PDO type with tag number and value
-     * @param tag tag number to set
-     * @param value string or null to set
-     * @return new TLV of PDO type
+     * Getter for next
+     * @return TLV object corresponding the direct "next"
      */
-    public static TLV newPDO(int tag, String value){
-        return newPDO(tag, encodeUTF8(value));
+    public TLV getNext(){
+        return this.next;
     }
     
+    /**
+     * Returns the last child or null if this hasn't any child
+     * @return Last child as TLV object or null
+     */
+    public TLV getLastChild(){
+        if(this.child == null) return null;
+        return child.getLastNext();
+    }
+    
+    /**
+     * Returns the last TLV object in the "next" chain
+     * If the next of the object is null, then this object is returned
+     * @return TLV object
+     */
+    public TLV getLastNext(){
+        if(next == null) return this;
+        return next.getLastNext();
+     }
     // // // // // // // // // // // // // // // // // // // // // // // //
 
     /**
