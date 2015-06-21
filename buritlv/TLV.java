@@ -23,6 +23,7 @@
  */
 package buritlv;
 
+import java.nio.ByteOrder;
 import java.nio.charset.Charset;
 
 /**
@@ -33,7 +34,16 @@ public final class TLV {
 
     private static final int MAX_VALUE_LENGTH = 65535;//32767*2;
     private static final int MAX_TAG_LENGTH = 127;//7F;
+    
     private static final Charset UTF8_CHARSET = Charset.forName("UTF-8");
+    
+    private static final String errorGreater = String.format("Tag value greater then %s", MAX_TAG_LENGTH);
+    private static final String errorNegative = "Tag value cannot be negative";
+    private static final String errorTooLong = String.format("Value length greater then %s", MAX_VALUE_LENGTH);
+    private static final String errorUnsupportedChild = "Cannot add child to PDO";
+    
+    private static final ByteOrder byteOrder = java.nio.ByteOrder.nativeOrder();
+    
     public static final boolean PDO = false;
     public static final boolean CDO = true;
 
@@ -41,7 +51,7 @@ public final class TLV {
     private int length;
     private byte[] value;
 
-    private TLV next;
+    private TLV sibling;
     private TLV child;
 
     private boolean isCdo;
@@ -55,19 +65,31 @@ public final class TLV {
      * @throws IllegalArgumentException if tag or value length is greater then
      * allowed
      */
-    public TLV(int tag, byte[] value, boolean isCdo) throws IllegalArgumentException {
+    private TLV(int tag, byte[] value, boolean isCdo) throws IllegalArgumentException {
         if (tag > MAX_TAG_LENGTH) {
-            throw new IllegalArgumentException("Tag value greater then " + MAX_TAG_LENGTH);
+            throw new IllegalArgumentException(errorGreater);
+        }
+        if (tag < 0) {
+            throw new IllegalArgumentException(errorNegative);
         }
         if (value != null && value.length > MAX_VALUE_LENGTH) {
-            throw new IllegalArgumentException("Value length greater then " + MAX_VALUE_LENGTH);
+            throw new IllegalArgumentException(errorTooLong);
         }
 
         this.isCdo = isCdo;
         this.tag = tag;
         this.value = value;
-        this.next = null;
+        this.length = 0;
+        this.sibling = null;
         this.child = null;
+    }
+    
+    public byte[] toByteArray(){
+        byte[] b = new byte[3 + ( value == null? 0 : value.length)];
+        setFirstByte(tag, isCdo, b);
+        setLengthAndValue(value, b);
+        
+        return b;
     }
     
     /**
@@ -139,11 +161,11 @@ public final class TLV {
     }
     
     /**
-     * Getter for next
-     * @return TLV object corresponding the direct "next"
+     * Getter for sibling
+     * @return TLV object corresponding the direct "sibling"
      */
-    public TLV getNext(){
-        return this.next;
+    public TLV getSibling(){
+        return this.sibling;
     }
     
     /**
@@ -151,28 +173,74 @@ public final class TLV {
      * @return Last child as TLV object or null
      */
     public TLV getLastChild(){
-        if(this.child == null) return null;
-        return child.getLastNext();
+        if(this.child == null) {
+            return null;
+        }
+        return child.getLastSibling();
     }
     
     /**
-     * Returns the last TLV object in the "next" chain
-     * If the next of the object is null, then this object is returned
+     * Returns the last TLV object in the "sibling" chain
+     * If the sibling of the object is null, then this object is returned
      * @return TLV object
      */
-    public TLV getLastNext(){
-        if(next == null) return this;
-        return next.getLastNext();
+    public TLV getLastSibling(){
+        if(sibling == null) {
+            return this;
+        }
+        return sibling.getLastSibling();
      }
-    // // // // // // // // // // // // // // // // // // // // // // // //
-
+    
     /**
      * Adds a child to this TLV object
-     * Current child will be replaced
-     * @param tlv TLV object or null
+     * Current child with siblings will be replaced
+     * @param tlv TLV object to add as first child
+     * @return the currently added TLV object
+     * @throws UnsupportedOperationException when trying to add child to a PDO
      */
-    public void addChild(TLV tlv){
+    public TLV addChild(TLV tlv) throws UnsupportedOperationException {
+        if(!this.isCdo){
+            throw new UnsupportedOperationException(errorUnsupportedChild);
+        }
         this.child = tlv;
+        return this.child;
+    }
+    
+    /**
+     * Adds a child as last child to this TLV object
+     * @param tlv TLV to add as last child
+     * @return the currently added TLV object
+     * @throws UnsupportedOperationException when trying to add child to a PDO
+     */
+    public TLV addChildLast(TLV tlv) throws UnsupportedOperationException {
+        if(this.child == null) {
+            return addChild(tlv);
+        }
+        return this.child.addSiblingLast(tlv);
+    }
+    
+    /**
+     * Adds a sibling to this TLV object
+     * Current sibling, if any, will be replaced
+     * @param tlv TLV object to add as first sibling
+     * @return the currently added TLV object
+     */
+    public TLV addSibling(TLV tlv){
+        this.sibling = tlv;
+        return this.sibling;
+    }
+    
+    /**
+     * Adds a sibling as last sibling to this TLV object
+     * @param tlv TLV object to add as last sibling
+     * @return the currently added TLV object
+     */
+    public TLV addSiblingLast(TLV tlv){
+        if(this.sibling == null) {
+            this.sibling = tlv;
+            return this.sibling;
+        }
+        return this.sibling.addSiblingLast(tlv);
     }
     ///////////////////////////////////////////////////////////////////////////
 
@@ -200,5 +268,29 @@ public final class TLV {
     public static byte[] encodeUTF8(String value) {
         if (value == null) return null;
         return value.getBytes(UTF8_CHARSET);
+    }
+
+    private static void setFirstByte(int tag, boolean cdo, byte[] array) {
+        if(cdo) {
+            array[0] = (byte)(tag | 0x00000080);
+        } else{
+            array[0] = (byte)(tag & 0x0000007F);
+        }
+    }
+
+    private void setLengthAndValue(byte[] value, byte[] b) {
+        if (value == null || value.length == 0) {
+            b[1] = 0x00;
+            b[2] = 0x00;
+        }else {
+            if(byteOrder == ByteOrder.BIG_ENDIAN){
+                b[1] = (byte)((value.length >> 8) & 0xFF);
+                b[2] = (byte)(value.length & 0xFF);
+            }else{
+                b[1] = (byte)(0x000000FF & value.length);
+                b[2] = (byte)((value.length >> 8) & 0xff);
+            }
+            System.arraycopy(value, 0, b, 3, value.length);
+        }
     }
 }
