@@ -33,14 +33,18 @@ import java.nio.charset.Charset;
 public final class TLV {
 
     private static final int MAX_VALUE_LENGTH = 65535;//32767*2;
-    private static final int MAX_TAG_LENGTH = 127;//7F;
+    private static final int MAX_TAG_VALUE = 127;//7F;
     
     private static final Charset UTF8_CHARSET = Charset.forName("UTF-8");
     
-    private static final String errorGreater = String.format("Tag value greater then %s", MAX_TAG_LENGTH);
-    private static final String errorNegative = "Tag value cannot be negative";
-    private static final String errorTooLong = String.format("Value length greater then %s", MAX_VALUE_LENGTH);
-    private static final String errorUnsupportedChild = "Cannot add child to PDO";
+    private static final String errorGreater = 
+            String.format("Tag value greater then %s", MAX_TAG_VALUE);
+    private static final String errorNegative = 
+            "Tag value cannot be negative";
+    private static final String errorTooLong = 
+            String.format("Value length greater then %s", MAX_VALUE_LENGTH);
+    private static final String errorUnsupportedChild = 
+            "Cannot add child to PDO";
     
     private static final ByteOrder byteOrder = java.nio.ByteOrder.nativeOrder();
     
@@ -62,18 +66,19 @@ public final class TLV {
      * @param tag tag value, must be lower then 128
      * @param value byte array, can be null and length must be lower then 65535
      * @param isCdo boolean, true if CDO, false otherwise
-     * @throws IllegalArgumentException if tag or value length is greater then
-     * allowed
+     * @throws InvalidTagValueException if the tag is to big or negative
+     * @throws TooLongValueException if the length of the value is too long
      */
-    private TLV(int tag, byte[] value, boolean isCdo) throws IllegalArgumentException {
-        if (tag > MAX_TAG_LENGTH) {
-            throw new IllegalArgumentException(errorGreater);
+    private TLV(int tag, byte[] value, boolean isCdo)
+            throws InvalidTagValueException, TooLongValueException {
+        if (tag > MAX_TAG_VALUE) {
+            throw new InvalidTagValueException(errorGreater);
         }
         if (tag < 0) {
-            throw new IllegalArgumentException(errorNegative);
+            throw new InvalidTagValueException(errorNegative);
         }
         if (value != null && value.length > MAX_VALUE_LENGTH) {
-            throw new IllegalArgumentException(errorTooLong);
+            throw new TooLongValueException(errorTooLong);
         }
 
         this.isCdo = isCdo;
@@ -84,22 +89,27 @@ public final class TLV {
         this.child = null;
     }
     
-    public byte[] toByteArray(){
-        byte[] b = new byte[3 + ( value == null? 0 : value.length)];
-        setFirstByte(tag, isCdo, b);
-        setLengthAndValue(value, b);
+    public byte[] toByteArray() throws TlvTooLongException{
+        int len = this.getLength();
+        if(len > MAX_VALUE_LENGTH){
+            throw new TlvTooLongException();
+        }
+        byte[] array = new byte[len];
+        setFirstByte(tag, isCdo, array);
+        setLengthAndValue(len, value, array);
         
-        return b;
+        return array;
     }
     
     /**
      * Creates a new TLV of CDO type with tag number
      * @param tag tag to set
      * @return new TLV of CDO type
-     * @throws IllegalArgumentException if tag or value length is greater then
-     * allowed
+     * @throws InvalidTagValueException if the tag is to big or negative
+     * @throws TooLongValueException if the length of the value is too long
      */
-    public static TLV newCDO(int tag) throws IllegalArgumentException {
+    public static TLV newCDO(int tag)
+            throws InvalidTagValueException, TooLongValueException {
         return new TLV(tag, null, true);
     }
     
@@ -108,10 +118,11 @@ public final class TLV {
      * @param tag tag number to set
      * @param value byte array or null to set
      * @return new TLV of PDO type
-     * @throws IllegalArgumentException if tag or value length is greater then
-     * allowed
+     * @throws InvalidTagValueException if the tag is to big or negative
+     * @throws TooLongValueException if the length of the value is too long
      */
-    public static TLV newPDO(int tag, byte[] value) throws IllegalArgumentException {
+    public static TLV newPDO(int tag, byte[] value)
+            throws InvalidTagValueException, TooLongValueException {
         return new TLV(tag, value, false);
     }
     
@@ -120,10 +131,11 @@ public final class TLV {
      * @param tag tag number to set
      * @param value string or null to set
      * @return new TLV of PDO type
-     * @throws IllegalArgumentException if tag or value length is greater then
-     * allowed
+     * @throws InvalidTagValueException if the tag is to big or negative
+     * @throws TooLongValueException if the length of the value is too long
      */
-    public static TLV newPDO(int tag, String value) throws IllegalArgumentException {
+    public static TLV newPDO(int tag, String value)
+            throws InvalidTagValueException, TooLongValueException {
         return newPDO(tag, encodeUTF8(value));
     }
     
@@ -144,6 +156,23 @@ public final class TLV {
         return this.tag;
     }
     
+    /**
+     * Returns the total length of the TLV,
+     * inclusive the length of the children and siblings
+     * At least 3 will be returned
+     * @return length of the value + 3 + length of the children and siblings
+     */
+    int getLength(){
+        int len = 3 + (value == null? 0 : value.length);
+        if(child != null){
+            len += child.getLength();
+        }
+        if(sibling != null){
+            len += sibling.getLength();
+        }
+        
+        return len;
+    }
     /**
      * Getter for value
      * @return byte array or null
@@ -278,17 +307,17 @@ public final class TLV {
         }
     }
 
-    private void setLengthAndValue(byte[] value, byte[] b) {
-        if (value == null || value.length == 0) {
+    private void setLengthAndValue(int length, byte[] value, byte[] b) {
+        if (value == null || length < 4) {
             b[1] = 0x00;
             b[2] = 0x00;
         }else {
             if(byteOrder == ByteOrder.BIG_ENDIAN){
-                b[1] = (byte)((value.length >> 8) & 0xFF);
-                b[2] = (byte)(value.length & 0xFF);
+                b[1] = (byte)(0x000000FF & length);
+                b[2] = (byte)((length >> 8) & 0x000000FF);
             }else{
-                b[1] = (byte)(0x000000FF & value.length);
-                b[2] = (byte)((value.length >> 8) & 0xff);
+                b[1] = (byte)((length >> 8) & 0x000000FF);
+                b[2] = (byte)(0x000000FF & length);
             }
             System.arraycopy(value, 0, b, 3, value.length);
         }
