@@ -34,16 +34,14 @@ import java.nio.charset.Charset;
 public final class TLV {
 
     private static final int MAX_VALUE_LENGTH = 65535;//32767*2;
-    private static final int MAX_TAG_LENGTH = 127;//7F;
-
+    private static final int MAX_TAG_VALUE = 127;//7F;
     private static final Charset UTF8_CHARSET = Charset.forName("UTF-8");
 
-    private static final String errorGreater = String.format("Tag value greater then %s", MAX_TAG_LENGTH);
+    private static final String errorGreater = String.format("Tag value greater then %s", MAX_TAG_VALUE);
     private static final String errorNegative = "Tag value cannot be negative";
     private static final String errorTooLong = String.format("Value length greater then %s", MAX_VALUE_LENGTH);
     private static final String errorUnsupportedChild = "Cannot add child to PDO";
     private static final String tab = "    ";
-
     private static final ByteOrder byteOrder = java.nio.ByteOrder.nativeOrder();
 
     public static final boolean PDO = false;
@@ -65,18 +63,19 @@ public final class TLV {
      * @param tag tag value, must be lower then 128
      * @param value byte array, can be null and length must be lower then 65535
      * @param isCdo boolean, true if CDO, false otherwise
-     * @throws IllegalArgumentException if tag or value length is greater then
-     * allowed
+     * @throws InvalidTagValueException if the tag is to big or negative
+     * @throws TooLongValueException if the length of the value is too long
      */
-    private TLV(int tag, byte[] value, boolean isCdo) throws IllegalArgumentException {
-        if (tag > MAX_TAG_LENGTH) {
-            throw new IllegalArgumentException(errorGreater);
+    private TLV(int tag, byte[] value, boolean isCdo)
+            throws InvalidTagValueException, TooLongValueException {
+        if (tag > MAX_TAG_VALUE) {
+            throw new InvalidTagValueException(errorGreater);
         }
         if (tag < 0) {
-            throw new IllegalArgumentException(errorNegative);
+            throw new InvalidTagValueException(errorNegative);
         }
         if (value != null && value.length > MAX_VALUE_LENGTH) {
-            throw new IllegalArgumentException(errorTooLong);
+            throw new TooLongValueException(errorTooLong);
         }
 
         this.isCdo = isCdo;
@@ -96,10 +95,16 @@ public final class TLV {
         return buffer.array();
     }
 
-    public byte[] toBytes() {
+    public byte[] toBytes() throws TlvTooLongException {
         int totalLength = getByteLength();
-        ByteBuffer buffer = ByteBuffer.allocate(totalLength);
+        if(totalLength > MAX_VALUE_LENGTH){
+            throw new TlvTooLongException();
+        }
         
+        ByteBuffer buffer = ByteBuffer.allocate(totalLength);
+        setFirstByte(tag, isCdo, buffer);
+        setLengthAndValue(value, buffer);
+
 //todo fix bytes
         return buffer.array();
     }
@@ -116,9 +121,11 @@ public final class TLV {
         return len;
     }
 
-    /**
-     * Returns the total length of this TLV (this TLV + child and sibling lengths)
-     * @return length of this TLV inclusive the length of the underlying TLV's
+     /**
+     * Returns the total length of the TLV,
+     * inclusive the length of the children and siblings
+     * At least 3 will be returned
+     * @return length of the value + 3 + length of the children and siblings
      */
     public int getByteLength() {
         this.length = getLength();
@@ -138,11 +145,12 @@ public final class TLV {
      *
      * @param tag tag to set
      * @return new TLV of CDO type
-     * @throws IllegalArgumentException if tag or value length is greater then
-     * allowed
+     * @throws InvalidTagValueException if the tag is to big or negative
+     * @throws TooLongValueException if the length of the value is too long
      */
-    public static TLV newCDO(int tag) throws IllegalArgumentException {
-        return new TLV(tag, null, CDO);
+    public static TLV newCDO(int tag)
+            throws InvalidTagValueException, TooLongValueException {
+        return new TLV(tag, null, true);
     }
 
     /**
@@ -151,10 +159,11 @@ public final class TLV {
      * @param tag tag number to set
      * @param value byte array or null to set
      * @return new TLV of PDO type
-     * @throws IllegalArgumentException if tag or value length is greater then
-     * allowed
+     * @throws InvalidTagValueException if the tag is to big or negative
+     * @throws TooLongValueException if the length of the value is too long
      */
-    public static TLV newPDO(int tag, byte[] value) throws IllegalArgumentException {
+    public static TLV newPDO(int tag, byte[] value)
+            throws InvalidTagValueException, TooLongValueException {
         return new TLV(tag, value, PDO);
     }
 
@@ -164,10 +173,11 @@ public final class TLV {
      * @param tag tag number to set
      * @param value string or null to set
      * @return new TLV of PDO type
-     * @throws IllegalArgumentException if tag or value length is greater then
-     * allowed
+     * @throws InvalidTagValueException if the tag is to big or negative
+     * @throws TooLongValueException if the length of the value is too long
      */
-    public static TLV newPDO(int tag, String value) throws IllegalArgumentException {
+    public static TLV newPDO(int tag, String value)
+            throws InvalidTagValueException, TooLongValueException {
         return newPDO(tag, encodeUTF8(value));
     }
 
@@ -189,7 +199,7 @@ public final class TLV {
     public int getTag() {
         return this.tag;
     }
-
+    
     /**
      * Getter for value
      *

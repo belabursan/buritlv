@@ -23,21 +23,16 @@
  */
 package buritlv;
 
-import java.nio.charset.Charset;
-
 /**
  *
  * @author buri
  */
-public final class TlvUtil {
-    
-    /**
-     * Converts a UTF-8 string to a byte array
-     * @param value string to convert
-     * @return byte array or null if argument is null or empty
-     */
-    public static byte[] ToByteArray(String value){
-        if(value == null || value.isEmpty()) return null;
-        return value.getBytes(Charset.forName("UTF-8"));
+class TlvTooLongException extends Exception {
+
+    public TlvTooLongException() {
     }
+    public TlvTooLongException(String message) {
+        super(message);
+    }
+    
 }
