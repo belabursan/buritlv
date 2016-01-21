@@ -1,5 +1,6 @@
-/*****************************************************************************
- * 
+/**
+ * ***************************************************************************
+ *
  * Copyright (c) 2016 Bela Bursan
  *
  * Permission is hereby granted, free of charge, to any person obtaining a
@@ -23,13 +24,16 @@
  * OTHERWISE, ARISING FROM, OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE
  * USE OR OTHER DEALINGS IN THE SOFTWARE.
  *
- *****************************************************************************/
+ ****************************************************************************
+ */
 package com.buri.tlv;
 
 import java.io.UnsupportedEncodingException;
+import java.nio.charset.Charset;
 
 /**
- * TLV class, represents a tag-length value objects
+ * TLV class, represents a tag-length-value objects
+ *
  * @author <a href="mailto:bursan@gmail.com">Bela Bursan</a>
  */
 public final class TLV {
@@ -38,28 +42,39 @@ public final class TLV {
     private int length;
     private byte[] value;
     private boolean tlvForm;    //pdo or cdo, true if cdo
-    private short tlvClass;    //Universal, Application, Context Specific, Private 
-    private short level;
+    private short tlvClass;     //Universal, Application, Context Specific, Private 
+    private short level;        //just used when printing the tlv
     private TLV next;
     private TLV child;
-    //
-    private final static String PRINT_TAB = "   ";
+
+    //charset encoding
+    private static final String ENCODING = "ISO-8859-1";
+    //just used when printing the tlv
+    private static final String PRINT_TAB = "   ";
     /**
      * Constant for Tag Class Universal
      */
-    public final static short CLASS_UNIVERSAL = 0x00;
+    public static final short CLASS_UNIVERSAL = 0x00;
     /**
      * Constant for Tag Class Application
      */
-    public final static short CLASS_APPLICATION = 0x01;
+    public static final short CLASS_APPLICATION = 0x01;
     /**
      * Constant for Tag Class Context Specific
      */
-    public final static short CLASS_CONTEXT_SPEC = 0x02;
+    public static final short CLASS_CONTEXT_SPEC = 0x02;
     /**
      * Constant for Tag Class Private
      */
-    public final static short CLASS_PRIVATE = 0x03;
+    public static final short CLASS_PRIVATE = 0x03;
+    /**
+     * Constant for CDO (constructed)
+     */
+    public static final boolean CDO = true;
+    /**
+     * Constant for PDO (primitive)
+     */
+    public static final boolean PDO = false;
 
     /**
      * Default constructor<br>
@@ -70,83 +85,84 @@ public final class TLV {
     }
 
     /**
-     * Constructor<br>
-     * Creates a new TLV-tag, tag, length, class and tlvForm must be set.<br>
-     * If value is set, the length will be set by constructor
+     * Constructor, creates a new TLV object, tag, form and class must be set.<br>
+     * If value is set, the length will be set by the constructor
      *
      * @param tag integer tag number
-     * @param isCdo boolean, true if CDO, false if PDO
+     * @param isCdo boolean, true if CDO, false if PDO, use the TLV static constants
      * @param tlvClass Universal = 0, Application = 1, Context Specific = 2,
-     * Private = 3
-     * @param value byte[] value, if CDO = content of CDO, if PDO value of PDO
+     * Private = 3, but use the TLV static constants
+     * @param value byte array, if CDO = content of CDO, if PDO value of PDO
      * @throws java.lang.IllegalArgumentException
      */
-    TLV(int tag, boolean isCdo, short tlvClass, byte[] value) throws IllegalArgumentException {
+    public TLV(int tag, boolean isCdo, short tlvClass, byte[] value) throws IllegalArgumentException {
         this();
         this.tag = tag;
-        if (value == null) {
-            this.length = 0;
-        } else {
+        this.tlvForm = isCdo;
+        this.length = 0;
+        
+        if (!isCdo && value != null) {
             this.value = value;
             this.length = value.length;
         }
-        this.tlvForm = isCdo;
+
         this.tlvClass = tlvClass;
         this.level = 0;
 
         if (!isValid()) {
-            throw new IllegalArgumentException("ERROR: Not valid value");
+            throw new IllegalArgumentException("Not valid value");
         }
     }
 
     /**
-     * Creates a new TLV from bytes received
+     * Constructor, creates a new TLV object of type PDO
      *
-     * @param rawValue
+     * @param tag tag number of the PDO
+     * @param tlvClass class of the PDO
+     * @param value string, which will be converted to a byte array
+     * @throws IllegalArgumentException
+     */
+    public TLV(int tag, short tlvClass, String value) throws IllegalArgumentException {
+        this(tag, TLV.PDO, tlvClass, value != null ? value.getBytes(Charset.forName(ENCODING)) : null);
+    }
+
+    /**
+     * Constructor, creates a new TLV object from a byte array
+     *
+     * @param rawValue byte array containing TLV(s)
      * @param startpos start position in the buffer
      * @param length length of bytes in byte buffer
      * @throws IllegalArgumentException
      */
     public TLV(byte[] rawValue, int startpos, int length) throws IllegalArgumentException {
         this();
-        getAndSetFirstTag(rawValue,startpos, length);
+        getAndSetFirstTag(rawValue, startpos, length);
         this.extractValue();
     }
-    
-    private void getAndSetFirstTag(byte[] rawValue, int startPosition, int length){
-        TLVFactory.getAndSetFirstTLVTag(this, rawValue, startPosition, length);
-    }
 
     /**
-     * Creates a new TLV from bytes received
+     * Creates a new TLV from a byte array<br>
+     * Usage:
+     * <code>
+        TLV t = new TLV();
+        t.createFromByteArray(b, 0, b.length);
+       </code>
      *
      * @param rawValue
-     * @return the remaining bytes if those was longer then the whole TLV(maybe
-     * from the next TLV?)
-     * @throws IllegalArgumentException
-     */
-    byte[] createFromRawValue(byte[] rawValue) throws IllegalArgumentException {
-        return createFromRawValue(rawValue, 0, rawValue.length);
-    }
-
-    /**
-     * Creates a new TLV from bytes received
-     *
-     * @param rawValue
-     * @param startpos start position in the buffer
-     * @param length length of bytes in byte buffer
-     * @return the remaining bytes if those was longer then the whole TLV(maybe
+     * @param startpos start position in the the buffer
+     * @param length number of bytes in the byte buffer to parse
+     * @return the remaining bytes if there was any (maybe
      * bytes from the next TLV?)
      * @throws IllegalArgumentException
      */
-    byte[] createFromRawValue(byte[] rawValue, int startpos, int length) throws IllegalArgumentException {
+    public byte[] createFromByteArray(byte[] rawValue, int startpos, int length) throws IllegalArgumentException {
         byte[] rem = TLVFactory.getAndSetFirstTLVTag(this, rawValue, startpos, length);
         this.extractValue();
         return rem;
     }
 
     /**
-     * Check if this TLV tag is valid.
+     * Checks if this TLV object is valid.
      *
      * @return true if tag, length and class is set and the length is the same
      * as value.length, otherwise returns false
@@ -159,7 +175,7 @@ public final class TLV {
     }
 
     /**
-     * Resets the tag.<br>
+     * Resets the TLV object<br>
      * This is recursive function, resets all the child and siblings<br>
      * Tag, length, class sets to -1, value, next and child to null and level to
      * 0.
@@ -174,7 +190,7 @@ public final class TLV {
         this.tag = -1;
         this.length = -1;
         this.tlvClass = -1;
-        this.tlvForm = false;
+        this.tlvForm = PDO;
         this.value = null;
         this.child = null;
         this.next = null;
@@ -182,46 +198,21 @@ public final class TLV {
     }
 
     /**
-     * Prints out this Tag in form |-pdo(tag)[value] or |-cdo(tag)[]
+     * Prints this TLV object in form of |-pdo(tag)[value] or |-cdo(tag)[]
      *
-     * @return this TLV-tag as stringBuffer
+     * @return this TLV object's string representation
      */
     @Override
     public String toString() {
-        StringBuffer ss = toString(new StringBuffer(1024));
-        ss.trimToSize();
-        return ss.toString();
-    }
-
-    private StringBuffer toString(StringBuffer ss) {
-        String tabs = "";
-        for (int i = 0; i < level; i++) {
-            tabs += PRINT_TAB;
-        }
-        if (tlvForm) {
-            ss.append(tabs).append("|-cdo").append(tag).append("[]\n");
-            if (child != null) {
-                child.toString(ss);
-            }
-            if (next != null) {
-                return next.toString(ss);
-            } else {
-                return ss;
-            }
-        } else {
-            ss.append(tabs).append("|-pdo").append(tag).append("[").append(getValueAsString()).append("]\n");
-            if (next != null) {
-                return next.toString(ss);
-            } else {
-                return ss;
-            }
-        }
+        StringBuilder sb = toString(new StringBuilder(1024));
+        sb.trimToSize();
+        return sb.toString();
     }
 
     /**
-     * Extracts the value of this TLV-tag and creates new TLV-tags from it.<br>
-     * This function is recursive that means that all it's child will be
-     * extracted too
+     * Extracts the value of this TLV object and creates new TLV object from it.<br>
+     * This function is recursive and means that all it's child will be
+     * extracted
      *
      * @throws java.lang.IllegalArgumentException if the value of this tag is
      * not valid BER string
@@ -278,11 +269,11 @@ public final class TLV {
     }
 
     /**
-     * Finds all occurrence(in the hole structure) of TLVTags with the specified
+     * Finds the first occurrence of a TLV object with the specified
      * tag number
      *
      * @param inTagNumber integer tag number to find
-     * @return a TLV object defined by the tag number or null if not found
+     * @return TLV object containing the tag number or null if not found
      */
     public TLV findTag(int inTagNumber) {
         if (this.tag == inTagNumber) {
@@ -305,8 +296,9 @@ public final class TLV {
     }
 
     /**
-     * Returns the value of this TLV-tag.
-     * @return value as byte arrays
+     * Returns the value of this TLV object.
+     *
+     * @return value as byte array
      */
     public byte[] getValue() {
         return value;
@@ -314,8 +306,9 @@ public final class TLV {
 
     /**
      * Get the value of this TLV-tag as a string.<br>
-     * If this tag is a CDO, null will be returned.<br>
-     * If the PDO value is null an empty string will be returned
+     * If this TLV object is a CDO, null will be returned.<br>
+     * If this TLV object is a PDO and the value is null an 
+     * empty string will be returned
      *
      * @return the value of the TLV as a string
      */
@@ -327,16 +320,18 @@ public final class TLV {
                 return "";
             }
             try {
-                return new String(value, "ISO-8859-1");
+                return new String(value, ENCODING);
             } catch (UnsupportedEncodingException ue) {
-                System.err.println("¤¤¤¤¤¤¤¤¤¤¤¤¤¤¤¤¤¤¤¤>> unsuported encoding: " + ue.getMessage());
+                System.err.println("TLV:getValueAsString()-unsuported encoding: "
+                        + ue.getMessage());
                 return new String(value);
             }
         }
     }
 
     /**
-     * Sets the value of this TLV-tag and updates the length<br>
+     * Sets the value of this TLV object and updates the length<br>
+     *
      * @param value byte array to be set, can be null
      */
     public void setValue(byte[] value) {
@@ -350,8 +345,8 @@ public final class TLV {
     }
 
     /**
-     * Returns the length of the value of this TLV-tag.<br>
-     * If this TLV-tag has no value 0 will be returned.<br>
+     * Returns the length of the value of this TLV object.<br>
+     * If this object has no value 0 will be returned.<br>
      * If -1 is returned than the TLV is invalid(not yet set).
      *
      * @return the length of the value as integer
@@ -361,9 +356,9 @@ public final class TLV {
     }
 
     /**
-     * Sets the length of the value of this TLV.<br>
-     * If this TLV has no value, the length
-     * must be set to 0
+     * Sets the length of the value of this TLV object<br>
+     * If this TLV has no value, the length must be set to 0
+     *
      * @param length the length of the value
      */
     public void setLength(int length) {
@@ -371,7 +366,8 @@ public final class TLV {
     }
 
     /**
-     * Returns the tag of this TLV
+     * Returns the tag of this TLV object
+     *
      * @return the tag as integer
      */
     public int getTag() {
@@ -379,7 +375,8 @@ public final class TLV {
     }
 
     /**
-     * Sets the tag part of this Tag
+     * Sets the tag number of this Tag object
+     *
      * @param tag the tag of this TLV
      */
     public void setTag(int tag) {
@@ -387,15 +384,17 @@ public final class TLV {
     }
 
     /**
-     * Returns the TLV class part of this Tag
+     * Returns the class of this TLV object
+     *
      * @return the TLV class as short
      */
-    public short getClassType() {
+    public short getTlvClass() {
         return tlvClass;
     }
 
     /**
-     * Sets the tag class type of this TLV
+     * Sets the class of this TLV object
+     *
      * @param tlvClass class to set
      */
     public void setTlvClass(int tlvClass) {
@@ -403,47 +402,27 @@ public final class TLV {
     }
 
     /**
-     * Sets the tag level in the TLV-tree
-     * @param level level to set
-     */
-    public void setLevel(int level) {
-        this.level = (short) level;
-        if (child != null) {
-            child.setLevel(level + 1);
-        }
-        if (next != null) {
-            next.setLevel(level);
-        }
-    }
-
-    /**
-     * Returns the tag level in the TLV-tree
-     * @return the Tag level as integer
-     */
-    public int getLevel() {
-        return (int) level;
-    }
-
-    /**
-     * Sets a boolean that should represent the tlvForm of this TLV<br>
-     * Therefore should not be changed by hand, only by PipeTLVFactory
+     * Sets a boolean that represents the form of this TLV object<br>
+     * Should not be changed after the TLV has been initialized
      *
      * @param tlvForm true if is constructed, false otherwise
      */
-    public void setIsCdo(boolean tlvForm) {
+    void setIsCdo(boolean tlvForm) {
         this.tlvForm = tlvForm;
     }
 
     /**
-     * Used to query if this BER tag structure is constructed
-     * @return True if tag is constructed or false
+     * Check if this TLV object is a CDO or PDO
+     *
+     * @return True if tag is constructed or false if it is a primitive
      */
     public boolean isCdo() {
         return tlvForm;
     }
 
     /**
-     * Returns the sibling(in the tree) to this tag
+     * Returns the sibling(in the tree) of this TLV object
+     *
      * @return TLV or null
      */
     public TLV getNext() {
@@ -451,8 +430,9 @@ public final class TLV {
     }
 
     /**
-     * Sets the sibling of this tag
-     * @param next
+     * Sets the sibling of this TLV object
+     *
+     * @param next TLV object to be set as next
      */
     public void setNext(TLV next) {
         this.next = next;
@@ -460,8 +440,9 @@ public final class TLV {
     }
 
     /**
-     * Returns the child(in the tree) to this tag
-     * @return TLV or null
+     * Returns the child(in the tree) of this TLV object
+     *
+     * @return the child TLV or null
      */
     public TLV getChild() {
         if (this.tlvForm) {
@@ -472,7 +453,8 @@ public final class TLV {
 
     /**
      * Sets the child of this tag
-     * @param tlv
+     *
+     * @param tlv TLV object to be set as child
      * @return returns the child (to be able to chain)
      */
     public TLV setChild(TLV tlv) {
@@ -488,6 +470,7 @@ public final class TLV {
     /**
      * Adds a child to this tag. If child already exists, this will be append at
      * the end of child list.
+     *
      * @param tlv child to add
      * @return the child
      */
@@ -501,9 +484,10 @@ public final class TLV {
     }
 
     /**
-     * Adds a child to the end of next. That means that if next is null the tag
+     * Adds a TLV object to the end of "next" list. That means that if next is null the tag
      * will be append there.<br>
      * If next is not null the same procedure will be made on the next.
+     *
      * @param tlv tag to add
      */
     public void addNextAtEnd(TLV tlv) {
@@ -515,23 +499,88 @@ public final class TLV {
     }
 
     /**
+     * Sets the tag level in the TLV-tree
+     *
+     * @param level level to set
+     */
+    void setLevel(int level) {
+        this.level = (short) level;
+        if (child != null) {
+            child.setLevel(level + 1);
+        }
+        if (next != null) {
+            next.setLevel(level);
+        }
+    }
+
+    /**
+     * Returns the tag level in the TLV-tree
+     *
+     * @return the Tag level as integer
+     */
+    int getLevel() {
+        return (int) level;
+    }
+
+    /**
+     * Only used by the constructors
+     * @param rawValue
+     * @param startPosition
+     * @param length 
+     */
+    private void getAndSetFirstTag(byte[] rawValue, int startPosition, int length) {
+        TLVFactory.getAndSetFirstTLVTag(this, rawValue, startPosition, length);
+    }
+
+    /**
+     * Used by the public toString()
+     * @param sb
+     * @return 
+     */
+    private StringBuilder toString(StringBuilder sb) {
+        String tabs = "";
+        for (int i = 0; i < level; i++) {
+            tabs += PRINT_TAB;
+        }
+        if (tlvForm) {
+            sb.append(tabs).append("|-cdo").append(tag).append("[]\n");
+            if (child != null) {
+                child.toString(sb);
+            }
+            if (next != null) {
+                return next.toString(sb);
+            } else {
+                return sb;
+            }
+        } else {
+            sb.append(tabs).append("|-pdo").append(tag).append("[").append(getValueAsString()).append("]\n");
+            if (next != null) {
+                return next.toString(sb);
+            } else {
+                return sb;
+            }
+        }
+    }
+
+    /**
      * Used by the TLV class
+     *
      * @see TLV
      */
-    private final static class TLVFactory {
+    private static final class TLVFactory {
 
         /**
          * Gets the first TLV-object and returns the remaining bytes if there is
-         * more TLV after
+         * more TLV left
          *
          * @param tlv TLV to be set
-         * @param byteArr from the TLV is set
+         * @param buffer from the TLV is set
          * @return byte array with the remaining bytes
          * @throws java.lang.IllegalArgumentException
          */
-        static byte[] getAndSetFirstTLVTag(TLV tlv, byte[] byteArr, int startpos, int length)
+        static byte[] getAndSetFirstTLVTag(TLV tlv, byte[] buffer, int startpos, int length)
                 throws IllegalArgumentException {
-            return setTLVTag(tlv, byteArr, startpos, length, true);
+            return setTLVTag(tlv, buffer, startpos, length, true);
         }
 
         /**
@@ -541,9 +590,9 @@ public final class TLV {
          * @return byte[] the byte representation of the TLV-object
          * @throws java.lang.IllegalArgumentException
          */
-        static synchronized byte[] convertTLVToByteArray(TLV tlv) throws IllegalArgumentException {
+        static byte[] convertTLVToByteArray(TLV tlv) throws IllegalArgumentException {
             if (tlv == null || !tlv.isValid()) {
-                throw new IllegalArgumentException("Error: tlv is null or empty");
+                throw new IllegalArgumentException("tlv is null or empty");
             }
             byte[] bytesOut;
             int tagLen = 0;
@@ -551,7 +600,7 @@ public final class TLV {
             int tag = tlv.getTag();
             byte tempByte = 0x00;
 
-            tempByte = setTlvClass(tempByte, tlv.getClassType());  //set class in first byte
+            tempByte = setTlvClass(tempByte, tlv.getTlvClass());  //set class in first byte
             tempByte = setTlvForm(tempByte, tlv.isCdo());         //set form
             if (tlv.getTag() < 31) {
                 tempByte = setTagInFirstByte(tempByte, tlv.getTag());
@@ -582,12 +631,12 @@ public final class TLV {
          * @param bytesToAdd
          * @throws java.lang.IllegalArgumentException
          */
-        static synchronized void addElementToCdoAtEnd(TLV tlv, byte[] bytesToAdd) throws IllegalArgumentException {
+        static void addElementToCdoAtEnd(TLV tlv, byte[] bytesToAdd) throws IllegalArgumentException {
             if (tlv == null || !tlv.isValid()) {
-                throw new IllegalArgumentException("Error: parameter tlv is null or invalid");
+                throw new IllegalArgumentException("Argument tlv is null or invalid");
             }
             if (bytesToAdd == null) {
-                throw new IllegalArgumentException("Error: parameter bytesToAdd is null(level:" + tlv.getLevel() + ", tag:" + tlv.getTag() + ")");
+                throw new IllegalArgumentException("Argument bytesToAdd is null(level:" + tlv.getLevel() + ", tag:" + tlv.getTag() + ")");
             }
             if (tlv.isCdo()) {
                 byte[] newValue = new byte[tlv.getLength() + bytesToAdd.length];
@@ -598,7 +647,7 @@ public final class TLV {
                 tlv.setValue(newValue);
                 tlv.setLength(newValue.length);
             } else {
-                throw new IllegalArgumentException("Error: tlv is not cdo(level:" + tlv.getLevel() + ", tag:" + tlv.getTag() + ")");
+                throw new IllegalArgumentException("Tlv is not cdo(level:" + tlv.getLevel() + ", tag:" + tlv.getTag() + ")");
             }
         }
 
@@ -610,13 +659,13 @@ public final class TLV {
          * @param bytesToAdd
          * @throws java.lang.IllegalArgumentException
          */
-        static synchronized void addElementToCdo(TLV tlv, byte[] bytesToAdd) throws IllegalArgumentException {
+        static void addElementToCdo(TLV tlv, byte[] bytesToAdd) throws IllegalArgumentException {
 
             if (tlv == null || !tlv.isValid()) {
-                throw new IllegalArgumentException("Error: parameter tlv is null or invalid");
+                throw new IllegalArgumentException("Argument tlv is null or invalid");
             }
             if (bytesToAdd == null) {
-                throw new IllegalArgumentException("Error: parameter bytesToAdd is null(level:" + tlv.getLevel() + ", tag:" + tlv.getTag() + ")");
+                throw new IllegalArgumentException("Argument bytesToAdd is null(level:" + tlv.getLevel() + ", tag:" + tlv.getTag() + ")");
             }
             if (tlv.isCdo()) {
                 byte[] newValue = new byte[tlv.getLength() + bytesToAdd.length];
@@ -627,7 +676,7 @@ public final class TLV {
                 tlv.setValue(newValue);
                 tlv.setLength(newValue.length);
             } else {
-                throw new IllegalArgumentException("Error: tlv is not cdo(level:" + tlv.getLevel() + ", tag:" + tlv.getTag() + ")");
+                throw new IllegalArgumentException("Tlv is not cdo(level:" + tlv.getLevel() + ", tag:" + tlv.getTag() + ")");
             }
         }
 
@@ -638,7 +687,7 @@ public final class TLV {
          * @param tlvToAdd TLV to be added
          * @throws java.lang.IllegalArgumentException
          */
-        static synchronized void addTLVToCDO(TLV tlvContainer, TLV tlvToAdd) throws IllegalArgumentException {
+        static void addTLVToCDO(TLV tlvContainer, TLV tlvToAdd) throws IllegalArgumentException {
             addElementToCdo(tlvContainer, convertTLVToByteArray(tlvToAdd));
         }
 
@@ -650,7 +699,7 @@ public final class TLV {
          * @param tlvToAdd TLV to be added
          * @throws java.lang.IllegalArgumentException
          */
-        static synchronized void addTLVToCDOAtEnd(TLV tlvContainer, TLV tlvToAdd) throws IllegalArgumentException {
+        static void addTLVToCDOAtEnd(TLV tlvContainer, TLV tlvToAdd) throws IllegalArgumentException {
             addElementToCdoAtEnd(tlvContainer, convertTLVToByteArray(tlvToAdd));
         }
 
@@ -663,7 +712,7 @@ public final class TLV {
          * @return new TLV object initialized with bytes
          * @throws java.lang.IllegalArgumentException
          */
-        static synchronized TLV createNewTlv(byte[] bytes, int startpos, int length, int level) throws IllegalArgumentException {
+        static TLV createNewTlv(byte[] bytes, int startpos, int length, int level) throws IllegalArgumentException {
             TLV t = new TLV();
             setTLVTag(t, bytes, startpos, length, false);
             t.setLevel(level);
@@ -677,20 +726,20 @@ public final class TLV {
          * @param bytes from the TLV is set
          * @throws java.lang.IllegalArgumentException
          */
-        static synchronized void setExistingTag(TLV tlv, byte[] bytes, int startpos, int length) throws IllegalArgumentException {
+        static void setExistingTag(TLV tlv, byte[] bytes, int startpos, int length) throws IllegalArgumentException {
             setTLVTag(tlv, bytes, startpos, length, false);
         }
 
         /////////////////// privates //////////////////////////////////////////
-        static private byte[] setTLVTag(TLV tlvIn, byte[] origByteArray, int startpos, int length, boolean doReturn) throws IllegalArgumentException {
+        private static byte[] setTLVTag(TLV tlvIn, byte[] origByteArray, int startpos, int length, boolean doReturn) throws IllegalArgumentException {
             if (tlvIn == null) {
-                throw new IllegalArgumentException("Error: Can't set TLVTag, tag is null");
+                throw new IllegalArgumentException("Can't set TLVTag, tag is null");
             }
             if (origByteArray == null) {
-                throw new IllegalArgumentException("Error: ByteArray is null");
+                throw new IllegalArgumentException("ByteArray is null");
             }
             if (length < 2) {
-                throw new IllegalArgumentException("Error: ByteArray length < 2");
+                throw new IllegalArgumentException("ByteArray length < 2");
             }
 
             int byteArrPosition = startpos;
@@ -709,10 +758,10 @@ public final class TLV {
                     byteArrPosition++;
                     if (byteArrPosition > 4) {
                         //the fourth bytes most significant bit must be zero
-                        throw new IllegalArgumentException("Error: Corrupt bytearray, Tag is more then 4 bytes long");
+                        throw new IllegalArgumentException("Corrupt bytearray, Tag is more then 4 bytes long");
                     }
                     if (byteArrPosition >= origLen) {
-                        throw new IllegalArgumentException("Error: Corrupt bytearray, Tag is longer then the hole array");
+                        throw new IllegalArgumentException("Corrupt bytearray, Tag is longer then the array");
                     }
                     b = origByteArray[byteArrPosition];
                     if ((b & 0x80) == 0) {
@@ -729,7 +778,7 @@ public final class TLV {
             //set length
             byteArrPosition++;
             if (byteArrPosition >= origLen) {
-                throw new IllegalArgumentException("Error: Length byte missing(level:" + tlvIn.getLevel() + ", tag:" + tlvIn.getTag() + ")");
+                throw new IllegalArgumentException("Length byte missing(level:" + tlvIn.getLevel() + ", tag:" + tlvIn.getTag() + ")");
             }
 
             b = origByteArray[byteArrPosition];
@@ -738,7 +787,7 @@ public final class TLV {
             } else {
                 int lenLength = (byte) (b & 0x7F);
                 if (lenLength > 4) {
-                    throw new IllegalArgumentException("Error: Length too long, max 4 bytes(now: " + lenLength + ");(level:" + tlvIn.getLevel() + ", tag:" + tlvIn.getTag() + ")");
+                    throw new IllegalArgumentException("Length too long, max 4 bytes(now: " + lenLength + ");(level:" + tlvIn.getLevel() + ", tag:" + tlvIn.getTag() + ")");
                 }
                 temp = 0 ^ (origByteArray[++byteArrPosition] & 0x000000FF);
                 for (int i = 0; i < lenLength - 1; i++) {
@@ -752,7 +801,7 @@ public final class TLV {
             byteArrPosition++;
             if (tlvIn.getLength() > 0) {
                 if (origLen - byteArrPosition < tlvIn.getLength()) {
-                    throw new IllegalArgumentException("Error: Value lengt is not valid(tag:" + tlvIn.getTag() + "); length: " + tlvIn.getLength() + "; real length: " + (origLen - byteArrPosition));
+                    throw new IllegalArgumentException("Value length is not valid(tag:" + tlvIn.getTag() + "); length: " + tlvIn.getLength() + "; real length: " + (origLen - byteArrPosition));
                 }
                 tlvIn.setValue(new byte[tlvIn.getLength()]);
                 System.arraycopy(origByteArray, byteArrPosition, tlvIn.getValue(), 0, tlvIn.getLength());
@@ -774,15 +823,15 @@ public final class TLV {
             }
         }
 
-        static private short getClass(byte b) {
+        private static short getClass(byte b) {
             return (short) ((0x000000FF & b) >> 6);
         }
 
-        static private boolean getForm(byte b) {
+        private static boolean getForm(byte b) {
             return (b & 0x20) != 0;
         }
 
-        static private void setTagBytes(int startpos, int tagAndLen, int len, byte[] origByteArray) {
+        private static void setTagBytes(int startpos, int tagAndLen, int len, byte[] origByteArray) {
             origByteArray[startpos] = 0x00;
             for (int i = 0; i < len; i++) {
                 origByteArray[i + startpos] = (byte) (tagAndLen >> ((len - i - 1) * 7));
@@ -794,7 +843,7 @@ public final class TLV {
             }
         }
 
-        static private void setLengthBytes(int startpos, int tagAndLen, int len, byte[] origByteArray) {
+        private static void setLengthBytes(int startpos, int tagAndLen, int len, byte[] origByteArray) {
             origByteArray[startpos] = 0x00;
             if (len == 0) {
                 origByteArray[startpos] = (byte) tagAndLen;
@@ -812,28 +861,24 @@ public final class TLV {
         }
 
         /**
-         * Returns number of bytes to use when storing the value
+         * Returns number of bytes to use when saving the value
          *
          * @param value Tag or length value
          * @return number of bytes as integer
          * @throws java.lang.IllegalArgumentException
          */
-        static private int getNrOfUsedTagBytes(int value) throws IllegalArgumentException {
+        private static int getNrOfUsedTagBytes(int value) throws IllegalArgumentException {
             if (value < 0) {
-                throw new IllegalArgumentException("Error: Tag or Length value < 0");
-            } else if (value > Integer.MAX_VALUE) {
-                throw new IllegalArgumentException("Error: Tag or Length value > Integer.MAX_VALUE(more then 4 bytes), value:" + value);
+                throw new IllegalArgumentException("Tag value < 0");
             } else if (value == 0) {
                 return 1;
             }
             return (int) Math.floor((Math.log(value) / Math.log(2)) / 7) + 1;
         }
 
-        static private int getNrOfUsedLenBytes(int value) throws IllegalArgumentException {
+        private static int getNrOfUsedLenBytes(int value) throws IllegalArgumentException {
             if (value < 0) {
-                throw new IllegalArgumentException("Error: Tag or Length value < 0");
-            } else if (value > Integer.MAX_VALUE) {
-                throw new IllegalArgumentException("Error: Tag or Length value > Integer.MAX_VALUE(more then 4 bytes), value:" + value);
+                throw new IllegalArgumentException("Length value < 0");
             } else if (value >= 0 && value <= 127) {
                 return 0;
             } else if (value > 127 && value <= 255) {
@@ -847,12 +892,12 @@ public final class TLV {
             }
         }
 
-        static private byte setTlvClass(byte firstByte, short tlvClass) {
+        private static byte setTlvClass(byte firstByte, short tlvClass) {
             firstByte = (byte) (firstByte & 0x3f);
             return (byte) (firstByte | ((byte) (tlvClass << 6)));
         }
 
-        static private byte setTlvForm(byte firstByte, boolean cdo) {
+        private static byte setTlvForm(byte firstByte, boolean cdo) {
             firstByte = (byte) (firstByte & 0xdf);
             if (cdo) {
                 firstByte = (byte) (firstByte | 0x20);
@@ -861,7 +906,7 @@ public final class TLV {
 
         }
 
-        static private byte setTagInFirstByte(byte firstByte, int tag) {
+        private static byte setTagInFirstByte(byte firstByte, int tag) {
             firstByte = (byte) (firstByte & 0xE0);
             return (byte) (firstByte | tag);
         }
@@ -869,3 +914,4 @@ public final class TLV {
     }
 
 }
+

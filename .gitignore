@@ -1,5 +1,5 @@
 *.class
-
+.DS_Store
 # Mobile Tools for Java (J2ME)
 .mtj.tmp/
 
@@ -15,3 +15,6 @@ hs_err_pid*
 /nbproj/TLV/build/
 /nbproj/TLV/dist/
 /nbproj/
+/TLVTest/nbproject/private/
+/TLVTest/build/
+/TLVTest/dist/
