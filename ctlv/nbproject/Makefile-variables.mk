@@ -9,19 +9,19 @@ CND_DISTDIR=dist
 # Debug configuration
 CND_PLATFORM_Debug=GNU-Linux
 CND_ARTIFACT_DIR_Debug=dist/Debug/GNU-Linux
-CND_ARTIFACT_NAME_Debug=libTLV.so
-CND_ARTIFACT_PATH_Debug=dist/Debug/GNU-Linux/libTLV.so
+CND_ARTIFACT_NAME_Debug=libctlv.so
+CND_ARTIFACT_PATH_Debug=dist/Debug/GNU-Linux/libctlv.so
 CND_PACKAGE_DIR_Debug=dist/Debug/GNU-Linux/package
-CND_PACKAGE_NAME_Debug=libTLV.so.tar
-CND_PACKAGE_PATH_Debug=dist/Debug/GNU-Linux/package/libTLV.so.tar
+CND_PACKAGE_NAME_Debug=libctlv.so.tar
+CND_PACKAGE_PATH_Debug=dist/Debug/GNU-Linux/package/libctlv.so.tar
 # Release configuration
 CND_PLATFORM_Release=GNU-Linux
 CND_ARTIFACT_DIR_Release=dist/Release/GNU-Linux
-CND_ARTIFACT_NAME_Release=libTLV.so
-CND_ARTIFACT_PATH_Release=dist/Release/GNU-Linux/libTLV.so
+CND_ARTIFACT_NAME_Release=libctlv.so
+CND_ARTIFACT_PATH_Release=dist/Release/GNU-Linux/libctlv.so
 CND_PACKAGE_DIR_Release=dist/Release/GNU-Linux/package
-CND_PACKAGE_NAME_Release=libTLV.so.tar
-CND_PACKAGE_PATH_Release=dist/Release/GNU-Linux/package/libTLV.so.tar
+CND_PACKAGE_NAME_Release=libctlv.so.tar
+CND_PACKAGE_PATH_Release=dist/Release/GNU-Linux/package/libctlv.so.tar
 #
 # include compiler specific variables
 #

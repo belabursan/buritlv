@@ -11,7 +11,6 @@
 #include <stdarg.h>
 #include <syslog.h>
 
-#define DEBUG 1
 
 #ifdef __cplusplus
 extern "C" {
@@ -26,4 +25,3 @@ void sysl(const int prio, const char *txt, ...);
 #endif
 
 #endif /* DBG_H */
-

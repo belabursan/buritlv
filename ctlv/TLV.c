@@ -1,6 +1,7 @@
 #include "TLV.h"
 #include "dbg.h"
 #include <string.h>
+#include <stdio.h>
 
 static struct TLV* tlv_new();
 static void tlv_reset(struct TLV *tlv);
@@ -44,6 +45,14 @@ static void tlv_reset(struct TLV *tlv)
     tlv->tag = 0;
     tlv->value = NULL;
     tlv->level = 0;
+}
+
+/**
+ * @brief Prints the library version to the standard out
+ */
+void tlv_version()
+{
+    printf("TLV version: v%s\n", TLV_VERSION);
 }
 
 /**
@@ -222,7 +231,7 @@ struct TLV *tlv_set_child(struct TLV *self, struct TLV *child)
  * @param tag tag of the TLV to search for
  * @return the requested TLV or NULL if not found 
  */
-struct TLV *tlv_find_by_tag(const struct TLV *self, const uint32_t tag)
+struct TLV *tlv_find_by_tag(const struct TLV *self, const int32_t tag)
 {
     struct TLV *tlv = NULL;
     if(self){

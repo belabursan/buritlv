@@ -38,6 +38,22 @@
         <rebuildPropChanged>false</rebuildPropChanged>
       </toolsSet>
       <compileType>
+        <cTool>
+          <architecture>2</architecture>
+          <commandlineTool>g++</commandlineTool>
+          <preprocessorList>
+            <Elem>DEBUG=1</Elem>
+          </preprocessorList>
+          <warningLevel>2</warningLevel>
+        </cTool>
+        <ccTool>
+          <preprocessorList>
+            <Elem>DEBUG=1</Elem>
+          </preprocessorList>
+        </ccTool>
+        <linkerTool>
+          <commandlineTool>g++</commandlineTool>
+        </linkerTool>
       </compileType>
       <item path="TLV.c" ex="false" tool="0" flavor2="0">
       </item>
@@ -56,7 +72,11 @@
       </toolsSet>
       <compileType>
         <cTool>
-          <developmentMode>5</developmentMode>
+          <developmentMode>6</developmentMode>
+          <stripSymbols>true</stripSymbols>
+          <architecture>2</architecture>
+          <commandlineTool>g++</commandlineTool>
+          <warningLevel>3</warningLevel>
         </cTool>
         <ccTool>
           <developmentMode>5</developmentMode>

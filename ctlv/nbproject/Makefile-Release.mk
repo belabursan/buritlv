@@ -14,7 +14,7 @@ GREP=grep
 NM=nm
 CCADMIN=CCadmin
 RANLIB=ranlib
-CC=gcc
+CC=g++
 CCC=g++
 CXX=g++
 FC=gfortran
@@ -40,7 +40,7 @@ OBJECTFILES= \
 
 
 # C Compiler Flags
-CFLAGS=
+CFLAGS=-m64
 
 # CC Compiler Flags
 CCFLAGS=
@@ -57,21 +57,21 @@ LDLIBSOPTIONS=
 
 # Build Targets
 .build-conf: ${BUILD_SUBPROJECTS}
-	"${MAKE}"  -f nbproject/Makefile-${CND_CONF}.mk ${CND_DISTDIR}/${CND_CONF}/${CND_PLATFORM}/libTLV.${CND_DLIB_EXT}
+	"${MAKE}"  -f nbproject/Makefile-${CND_CONF}.mk ${CND_DISTDIR}/${CND_CONF}/${CND_PLATFORM}/libctlv.${CND_DLIB_EXT}
 
-${CND_DISTDIR}/${CND_CONF}/${CND_PLATFORM}/libTLV.${CND_DLIB_EXT}: ${OBJECTFILES}
+${CND_DISTDIR}/${CND_CONF}/${CND_PLATFORM}/libctlv.${CND_DLIB_EXT}: ${OBJECTFILES}
 	${MKDIR} -p ${CND_DISTDIR}/${CND_CONF}/${CND_PLATFORM}
-	${LINK.c} -o ${CND_DISTDIR}/${CND_CONF}/${CND_PLATFORM}/libTLV.${CND_DLIB_EXT} ${OBJECTFILES} ${LDLIBSOPTIONS} -shared -fPIC
+	${LINK.c} -o ${CND_DISTDIR}/${CND_CONF}/${CND_PLATFORM}/libctlv.${CND_DLIB_EXT} ${OBJECTFILES} ${LDLIBSOPTIONS} -shared -fPIC
 
 ${OBJECTDIR}/TLV.o: TLV.c 
 	${MKDIR} -p ${OBJECTDIR}
 	${RM} "$@.d"
-	$(COMPILE.c) -O2 -fPIC  -MMD -MP -MF "$@.d" -o ${OBJECTDIR}/TLV.o TLV.c
+	$(COMPILE.c) -O3 -Werror -s -fPIC  -MMD -MP -MF "$@.d" -o ${OBJECTDIR}/TLV.o TLV.c
 
 ${OBJECTDIR}/dbg.o: dbg.c 
 	${MKDIR} -p ${OBJECTDIR}
 	${RM} "$@.d"
-	$(COMPILE.c) -O2 -fPIC  -MMD -MP -MF "$@.d" -o ${OBJECTDIR}/dbg.o dbg.c
+	$(COMPILE.c) -O3 -Werror -s -fPIC  -MMD -MP -MF "$@.d" -o ${OBJECTDIR}/dbg.o dbg.c
 
 # Subprojects
 .build-subprojects:
@@ -79,7 +79,7 @@ ${OBJECTDIR}/dbg.o: dbg.c
 # Clean Targets
 .clean-conf: ${CLEAN_SUBPROJECTS}
 	${RM} -r ${CND_BUILDDIR}/${CND_CONF}
-	${RM} ${CND_DISTDIR}/${CND_CONF}/${CND_PLATFORM}/libTLV.${CND_DLIB_EXT}
+	${RM} ${CND_DISTDIR}/${CND_CONF}/${CND_PLATFORM}/libctlv.${CND_DLIB_EXT}
 
 # Subprojects
 .clean-subprojects:
