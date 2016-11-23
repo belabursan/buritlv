@@ -18,3 +18,11 @@ hs_err_pid*
 /TLVTest/nbproject/private/
 /TLVTest/build/
 /TLVTest/dist/
+
+### NetBeans ###
+nbproject/private/
+build/
+nbbuild/
+dist/
+nbdist/
+.nb-gradle/
