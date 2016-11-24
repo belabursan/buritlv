@@ -7,9 +7,10 @@
     <editor-bookmarks xmlns="http://www.netbeans.org/ns/editor-bookmarks/2" lastBookmarkId="0"/>
     <open-files xmlns="http://www.netbeans.org/ns/projectui-open-files/2">
         <group>
-            <file>file:/home/bela/NetBeansProjects/TLV/TLV.h</file>
-            <file>file:/home/bela/NetBeansProjects/TLV/TLV.c</file>
-            <file>file:/home/bela/NetBeansProjects/TLV/dbg.c</file>
+            <file>file:/home/bela/NetBeansProjects/buritlv/ctlv/TLV.c</file>
+            <file>file:/home/bela/NetBeansProjects/buritlv/ctlv/dbg.c</file>
+            <file>file:/home/bela/NetBeansProjects/buritlv/ctlv/TLV.h</file>
+            <file>file:/home/bela/NetBeansProjects/buritlv/ctlv/dbg.h</file>
         </group>
     </open-files>
 </project-private>
