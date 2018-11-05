@@ -1,11 +1,10 @@
 <?xml version="1.0" encoding="UTF-8"?>
-<configurationDescriptor version="97">
+<configurationDescriptor version="100">
   <logicalFolder name="root" displayName="root" projectFiles="true" kind="ROOT">
     <logicalFolder name="HeaderFiles"
                    displayName="Header Files"
                    projectFiles="true">
-      <itemPath>TLV.h</itemPath>
-      <itemPath>dbg.h</itemPath>
+      <itemPath>tlv.h</itemPath>
     </logicalFolder>
     <logicalFolder name="ResourceFiles"
                    displayName="Resource Files"
@@ -14,8 +13,7 @@
     <logicalFolder name="SourceFiles"
                    displayName="Source Files"
                    projectFiles="true">
-      <itemPath>TLV.c</itemPath>
-      <itemPath>dbg.c</itemPath>
+      <itemPath>tlv.c</itemPath>
     </logicalFolder>
     <logicalFolder name="TestFiles"
                    displayName="Test Files"
@@ -40,10 +38,12 @@
       <compileType>
         <cTool>
           <architecture>2</architecture>
+          <standard>3</standard>
           <commandlineTool>g++</commandlineTool>
           <preprocessorList>
-            <Elem>DEBUG=1</Elem>
+            <Elem>TLV_DEBUG=1</Elem>
           </preprocessorList>
+          <useLinkerLibraries>false</useLinkerLibraries>
           <warningLevel>2</warningLevel>
         </cTool>
         <ccTool>
@@ -55,13 +55,9 @@
           <commandlineTool>g++</commandlineTool>
         </linkerTool>
       </compileType>
-      <item path="TLV.c" ex="false" tool="0" flavor2="0">
+      <item path="tlv.c" ex="false" tool="0" flavor2="0">
       </item>
-      <item path="TLV.h" ex="false" tool="3" flavor2="0">
-      </item>
-      <item path="dbg.c" ex="false" tool="0" flavor2="0">
-      </item>
-      <item path="dbg.h" ex="false" tool="3" flavor2="0">
+      <item path="tlv.h" ex="false" tool="3" flavor2="0">
       </item>
     </conf>
     <conf name="Release" type="2">
@@ -88,13 +84,9 @@
           <developmentMode>5</developmentMode>
         </asmTool>
       </compileType>
-      <item path="TLV.c" ex="false" tool="0" flavor2="0">
+      <item path="tlv.c" ex="false" tool="0" flavor2="0">
       </item>
-      <item path="TLV.h" ex="false" tool="3" flavor2="0">
-      </item>
-      <item path="dbg.c" ex="false" tool="0" flavor2="0">
-      </item>
-      <item path="dbg.h" ex="false" tool="3" flavor2="0">
+      <item path="tlv.h" ex="false" tool="3" flavor2="0">
       </item>
     </conf>
   </confs>

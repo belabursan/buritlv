@@ -35,8 +35,7 @@ OBJECTDIR=${CND_BUILDDIR}/${CND_CONF}/${CND_PLATFORM}
 
 # Object Files
 OBJECTFILES= \
-	${OBJECTDIR}/TLV.o \
-	${OBJECTDIR}/dbg.o
+	${OBJECTDIR}/tlv.o
 
 
 # C Compiler Flags
@@ -63,15 +62,10 @@ ${CND_DISTDIR}/${CND_CONF}/${CND_PLATFORM}/libctlv.${CND_DLIB_EXT}: ${OBJECTFILE
 	${MKDIR} -p ${CND_DISTDIR}/${CND_CONF}/${CND_PLATFORM}
 	g++ -o ${CND_DISTDIR}/${CND_CONF}/${CND_PLATFORM}/libctlv.${CND_DLIB_EXT} ${OBJECTFILES} ${LDLIBSOPTIONS} -shared -fPIC
 
-${OBJECTDIR}/TLV.o: TLV.c 
+${OBJECTDIR}/tlv.o: tlv.c
 	${MKDIR} -p ${OBJECTDIR}
 	${RM} "$@.d"
-	$(COMPILE.c) -g -Wall -DDEBUG=1 -fPIC  -MMD -MP -MF "$@.d" -o ${OBJECTDIR}/TLV.o TLV.c
-
-${OBJECTDIR}/dbg.o: dbg.c 
-	${MKDIR} -p ${OBJECTDIR}
-	${RM} "$@.d"
-	$(COMPILE.c) -g -Wall -DDEBUG=1 -fPIC  -MMD -MP -MF "$@.d" -o ${OBJECTDIR}/dbg.o dbg.c
+	$(COMPILE.c) -g -Wall -DTLV_DEBUG=1 -std=c99 -fPIC  -MMD -MP -MF "$@.d" -o ${OBJECTDIR}/tlv.o tlv.c
 
 # Subprojects
 .build-subprojects:
@@ -79,7 +73,6 @@ ${OBJECTDIR}/dbg.o: dbg.c
 # Clean Targets
 .clean-conf: ${CLEAN_SUBPROJECTS}
 	${RM} -r ${CND_BUILDDIR}/${CND_CONF}
-	${RM} ${CND_DISTDIR}/${CND_CONF}/${CND_PLATFORM}/libctlv.${CND_DLIB_EXT}
 
 # Subprojects
 .clean-subprojects:
