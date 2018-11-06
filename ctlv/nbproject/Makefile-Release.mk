@@ -14,7 +14,7 @@ GREP=grep
 NM=nm
 CCADMIN=CCadmin
 RANLIB=ranlib
-CC=g++
+CC=gcc
 CCC=g++
 CXX=g++
 FC=gfortran
@@ -39,7 +39,7 @@ OBJECTFILES= \
 
 
 # C Compiler Flags
-CFLAGS=-m64
+CFLAGS=-m64 -Wall
 
 # CC Compiler Flags
 CCFLAGS=
@@ -65,7 +65,7 @@ ${CND_DISTDIR}/${CND_CONF}/${CND_PLATFORM}/libctlv.${CND_DLIB_EXT}: ${OBJECTFILE
 ${OBJECTDIR}/tlv.o: tlv.c
 	${MKDIR} -p ${OBJECTDIR}
 	${RM} "$@.d"
-	$(COMPILE.c) -O3 -Werror -s -fPIC  -MMD -MP -MF "$@.d" -o ${OBJECTDIR}/tlv.o tlv.c
+	$(COMPILE.c) -O3 -Werror -s -std=c99 -fPIC  -MMD -MP -MF "$@.d" -o ${OBJECTDIR}/tlv.o tlv.c
 
 # Subprojects
 .build-subprojects:

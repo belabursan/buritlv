@@ -39,7 +39,7 @@
         <cTool>
           <architecture>2</architecture>
           <standard>3</standard>
-          <commandlineTool>g++</commandlineTool>
+          <commandlineTool>gcc</commandlineTool>
           <preprocessorList>
             <Elem>TLV_DEBUG=1</Elem>
           </preprocessorList>
@@ -71,7 +71,9 @@
           <developmentMode>6</developmentMode>
           <stripSymbols>true</stripSymbols>
           <architecture>2</architecture>
-          <commandlineTool>g++</commandlineTool>
+          <standard>3</standard>
+          <commandlineTool>gcc</commandlineTool>
+          <commandLine>-Wall</commandLine>
           <warningLevel>3</warningLevel>
         </cTool>
         <ccTool>
