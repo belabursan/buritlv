@@ -30,6 +30,8 @@ static tlv_t* tlv_reset(tlv_t *tlv);
  */
 static tlv_t* tlv_set_child(tlv_t *tlv, tlv_t *child);
 
+static bool get_total_length(const tlv_t *tlv, size_t *length);
+
 
 #ifdef TLV_DEBUG
 /**
@@ -44,6 +46,9 @@ static tlv_t* tlv_set_child(tlv_t *tlv, tlv_t *child);
 static bool to_string(const tlv_t *tlv, char *str, size_t size, tlv_level_t level);
 
 
+static bool to_byte_array(tlv_t *tlv, uint8_t **array, uint32_t *index, size_t length);
+
+static bool set_header(tlv_t *tlv, uint8_t *array, uint32_t *index, size_t length);
 #endif
 
 /********** PUBLIC DEFINITIONS ************************************************/
@@ -85,7 +90,6 @@ tlv_t* tlv_append_next(tlv_t *tlv, tlv_t *next) {
         tlv_t *tmp = tlv;
 
         while (tmp->next != NULL) {
-            //find the last "next" element
             tmp = tmp->next;
         }
         tmp->next = next;
@@ -97,6 +101,7 @@ tlv_t* tlv_append_next(tlv_t *tlv, tlv_t *next) {
 
     return NULL;
 }
+
 
 tlv_t* tlv_append_child(tlv_t *tlv, tlv_t*child) {
     if (tlv && child) {
@@ -138,8 +143,8 @@ const tlv_t* tlv_find_by_tag(const tlv_t *tlv, const tlv_tag_t tag) {
 
 void tlv_delete(tlv_t **tlv) {
     if (tlv != NULL && *tlv != NULL) {
-        tlv_delete_all(&(*tlv)->next);
-        tlv_delete_all(&(*tlv)->child);
+        tlv_delete(&(*tlv)->next);
+        tlv_delete(&(*tlv)->child);
         (*tlv)->value = NULL;
         (*tlv)->length = 0;
         free(*tlv);
@@ -163,25 +168,54 @@ void tlv_delete_all(tlv_t **tlv) {
     }
 }
 
+bool tlv_to_byte_array(tlv_t *tlv, uint8_t **barray, size_t *size) {
+    size_t length = 0;
+    if (barray != NULL && size != NULL) {
+        if (get_total_length(tlv, &length)) {
+            printf("Length: %u\n", (unsigned) length);
+            uint8_t *array = malloc(length);
+
+            if (array != NULL) {
+                uint32_t index = 0;
+                to_byte_array(tlv, &array, &index, length);
+                *barray = array;
+                *size = length;
+                return true;
+            }
+            tlv_debug_cb("Fatal - Failed to allocate memory for array");
+            return false;
+        }
+        tlv_debug_cb("Error - Failed to get size of the object");
+        return false;
+    }
+
+    return false;
+}
+
 
 #ifdef TLV_DEBUG
 
 const char* tlv_to_string(const tlv_t *tlv) {
     if (tlv != NULL) {
+        size_t tlv_length = 0;
+        if (!get_total_length(tlv, &tlv_length)) {
+            tlv_debug_cb("Error - Got wrong tlv length(%u) when printing object", (unsigned) tlv_length);
+            return NULL;
+        }
 
-        char *instr = malloc(8096);
-        memset(instr, 0, sizeof(*instr));
-        if (!to_string(tlv, instr, sizeof(*instr), 0)) {
+        size_t total_length = tlv_length * 5;
+        char *instr = malloc(total_length);
+        memset(instr, 0, total_length);
+        if (!to_string(tlv, instr, total_length, 0)) {
             tlv_debug_cb("Warning - The string may not be complete");
         }
-        
+
         return instr;
     }
 
-    tlv_debug_cb("Error - Tlv is null");
+    tlv_debug_cb("Error - Tlv is null when trying to convert it to string");
     return NULL;
 }
-
 
 void __attribute__ ((weak)) tlv_debug_cb(const char *txt, ...) {
     va_list args;
@@ -192,7 +226,6 @@ void __attribute__ ((weak)) tlv_debug_cb(const char *txt, ...) {
 }
 
 #endif
-
 
 /********** PRIVATE DEFINITIONS ***********************************************/
 static tlv_t* tlv_new() {
@@ -209,11 +242,6 @@ static tlv_t* tlv_new() {
     return tlv_reset(tlv);
 }
 
-/**
- * @brief Resets a tlv object
- * All members will be set to defaults like NULL and 0
- * @param tlv Tlv object to reset
- */
 static tlv_t* tlv_reset(tlv_t *tlv) {
     tlv->child = NULL;
     tlv->next = NULL;
@@ -252,6 +280,30 @@ static tlv_t* tlv_set_child(tlv_t *tlv, tlv_t *child) {
     return NULL;
 }
 
+static bool get_total_length(const tlv_t *tlv, size_t *length) {
+    size_t buffer_length = BER_HEADER_BYTE_LENGTH;
+    size_t tmp_len = 0;
+
+    if (tlv != NULL) {
+        if (tlv->type == TLV_PDO) {
+            buffer_length += tlv->length; // value length + header length
+        }
+        if (tlv->child != NULL) {
+            get_total_length(tlv->child, &tmp_len);
+            buffer_length += tmp_len;
+        }
+
+        if (tlv->next != NULL) {
+            get_total_length(tlv->next, &tmp_len);
+            buffer_length += tmp_len;
+        }
+
+        *length = buffer_length;
+        return true;
+    }
+    return false;
+}
+
 
 #ifdef TLV_DEBUG
 
@@ -259,11 +311,11 @@ static bool to_string(const tlv_t *tlv, char *str, size_t size, tlv_level_t leve
     int ret;
     char space[(4 * level) + 1];
 
-    memset(space, ' ', (sizeof(space) - 1));
-    space[sizeof(space) - 1] = '\0';
+    memset(space, ' ', (sizeof (space) - 1));
+    space[sizeof (space) - 1] = '\0';
 
     if (tlv->type == TLV_CDO) {
-        ret = snprintf(str, size, "%scdo(%u)-[]\n", space, tlv->tag);
+        ret = snprintf(str, size, "%s|cdo+%u|-[]\n", space, tlv->tag);
         if (ret < 0 || (size_t) ret > size) {
             return false;
         }
@@ -279,19 +331,19 @@ static bool to_string(const tlv_t *tlv, char *str, size_t size, tlv_level_t leve
             char value[(tlv->length * 5) + 1];
 
             for (uint16_t i = 0; i < tlv->length; i++) {
-                ret = snprintf(&value[i * 5], sizeof(value), "0x%02X ", tlv->value[i]);
-                if (ret < 0 || (size_t) ret > sizeof(value)) {
+                ret = snprintf(&value[i * 5], sizeof (value), "0x%02X ", tlv->value[i]);
+                if (ret < 0 || (size_t) ret > sizeof (value)) {
                     return false;
                 }
             }
             value[(tlv->length * 5)] = 0;
 
-            ret = snprintf(str, size, "%spdo(%u)-[ %s]\n", space, tlv->tag, value);
+            ret = snprintf(str, size, "%s|pdo+%u|-[ %s]\n", space, tlv->tag, value);
             if (ret < 0 || (size_t) ret > size) {
                 return false;
             }
         } else {
-            ret = snprintf(str, size, "%spdo(%u)-[]\n", space, tlv->tag);
+            ret = snprintf(str, size, "%s|pdo+%u|-[]\n", space, tlv->tag);
             if (ret < 0 || (size_t) ret > size) {
                 return false;
             }
@@ -306,3 +358,27 @@ static bool to_string(const tlv_t *tlv, char *str, size_t size, tlv_level_t leve
 }
 
 #endif
+
+static bool set_header(tlv_t *tlv, uint8_t *array, uint32_t *index, size_t length) {
+    if (*index + BER_HEADER_BYTE_LENGTH > length) {
+        tlv_debug_cb("Error - not enough room for tlv header");
+        return false;
+    }
+
+    array[(*index)++] = tlv->type;
+    array[(*index)++] = (uint8_t) (tlv->tag >> 8);
+    array[(*index)++] = (uint8_t) (tlv->tag & 0x00ff);
+    array[(*index)++] = (uint8_t) (tlv->length >> 8);
+    array[(*index)++] = (uint8_t) (tlv->length & 0x00ff);
+
+    return true;
+}
+
+static bool to_byte_array(tlv_t *tlv, uint8_t **array, uint32_t *index, size_t length) {
+    if (set_header(tlv, *array, index, length)) {
+        if (tlv->type == TLV_CDO) {
+
+        }
+    }
+    return false;
+}

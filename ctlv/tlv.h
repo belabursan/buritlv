@@ -20,17 +20,18 @@ extern "C" {
     typedef struct sTLV tlv_t;
     typedef uint16_t tlv_tag_t;
     typedef uint16_t tlv_length_t;
+    typedef uint8_t tlv_type_t;
 #ifdef TLV_DEBUG
     typedef uint16_t tlv_level_t;
 #endif
-    
+    static const uint8_t BER_HEADER_BYTE_LENGTH = 5; // 1 byte type, 2 bytes tag and 2 bytes length
+
     typedef enum {
         TLV_NOT_SET = 0,
         TLV_CDO = 0xFA,
         TLV_PDO = 0xBA
-    } tlv_type_t;
+    } tlv_types_t;
 
-    
     struct sTLV {
         tlv_t *next;
         tlv_t *child;
@@ -104,15 +105,23 @@ extern "C" {
      * @param tlv Tlv object to delete
      */
     void tlv_delete_all(tlv_t **tlv);
-    
-    //bool tlv_to_byte_array(tlv_t *tlv, uint8_t *barray, size_t *size);
-    
-    
+
+
+    /**
+     * Converts a tlv object to a byte array
+     * @param tlv Tlv object to convert
+     * @param barray Return point of the byte array
+     * @param size Size of the returned byte array
+     * @return True if successful, false otherwise
+     */
+    bool tlv_to_byte_array(tlv_t *tlv, uint8_t **barray, size_t *size);
+
+
     //tlv_t* tlv_from_byte_array(uint8_t *barray, size_t size);
-    
-    
+
+
 #ifdef TLV_DEBUG   
-    
+
     /**
      * Returns the string representation of the tlv object
      * Note: the returned string is dynamically allocated and must be "freed" after use
@@ -121,8 +130,8 @@ extern "C" {
      * @return The string or null
      */
     const char* tlv_to_string(const tlv_t *tlv);
-    
-    
+
+
     /**
      * Callback function for debug information
      * Note: This function is defined as weak, override is possible
@@ -131,7 +140,7 @@ extern "C" {
      * @param ... Variable length arguments
      */
     extern void tlv_debug_cb(const char *txt, ...);
-    
+
 #endif /* TLV_DEBUG */
 
 #ifdef __cplusplus
