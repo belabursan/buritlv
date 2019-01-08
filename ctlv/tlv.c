@@ -9,32 +9,57 @@
 /********** PRIVATE DECLARATIONS **********************************************/
 /**
  * @brief Creates a new tlv object
- * Allocates memory for the struct
+ * Allocates memory for the tlv struct
  * @return Pointer to the struct or NULL if allocation failed
  */
-static tlv_t* tlv_new();
+static tlv_t* tlv_new(void);
 
 
 /**
  * @brief Resets a tlv object
  * All members will be set to defaults like NULL and 0
- * @param tlv Tlv object to reset
+ * @param[in] tlv Tlv object to reset
  */
 static tlv_t* tlv_reset(tlv_t *tlv);
 
 
 /**
  * @brief Sets the child of this tag
- * @param tlv Tlv object to set the child element on
- * @param child TLV object to be set as child
+ * @param[in] tlv Tlv object to set the child element on
+ * @param[in] child TLV object to be set as child
  * @return Returns the child element or NULL
  */
 static tlv_t* tlv_set_child(tlv_t *tlv, tlv_t *child);
 
+
+/**
+ * @brief Returns the total length of the specified tlv object
+ * @param[in] tlv Tlv object to get the length for
+ * @param[out] length The length of the tlv object in bytes
+ * @return True if the function succeeded, false otherwise
+ */
 static bool get_total_length(const tlv_t *tlv, size_t *length);
 
+
+/**
+ * @brief Saves a Tlv header in an array
+ * @param[in] tlv Tlv to save the header for
+ * @param[in,out] array Array to save the header in
+ * @param[in] index Pointer to the index of the array
+ * @param[in] length Total length of the array
+ * @return True if setting header succeeded, false otherwise
+ */
 static bool set_header(const tlv_t *tlv, uint8_t *array, uint32_t *index, const size_t length);
 
+
+/**
+ * @brief Converts a Tlv to a byte array
+ * @param[in] tlv Tlv to convert
+ * @param[in,out] array Return point of the array
+ * @param[in] index Pointer to the index of the array
+ * @param[in] length Total length of the array
+ * @return True if conversion succeeded, false otherwise
+ */
 static bool to_byte_array(const tlv_t *tlv, uint8_t **array, uint32_t *index, const size_t length);
 
 #ifdef TLV_DEBUG
@@ -243,7 +268,7 @@ void __attribute__ ((weak)) tlv_debug_cb(const char *txt, ...) {
 
 
 /********** PRIVATE DEFINITIONS ***********************************************/
-static tlv_t* tlv_new() {
+static tlv_t* tlv_new(void) {
     tlv_t *tlv;
 
     tlv = (tlv_t*) malloc(sizeof (*tlv));
