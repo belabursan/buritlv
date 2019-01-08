@@ -17,7 +17,7 @@
 extern "C" {
 #endif
 
-    typedef struct sTLV tlv_t;
+    typedef struct stTLV tlv_t;
     typedef uint16_t tlv_tag_t;
     typedef uint16_t tlv_length_t;
     typedef uint8_t tlv_type_t;
@@ -32,7 +32,7 @@ extern "C" {
         TLV_PDO = 0xBA
     } tlv_types_t;
 
-    struct sTLV {
+    struct stTLV {
         tlv_t *next;
         tlv_t *child;
         uint8_t *value;
