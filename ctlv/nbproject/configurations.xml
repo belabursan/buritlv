@@ -40,17 +40,9 @@
           <architecture>2</architecture>
           <standard>3</standard>
           <commandlineTool>gcc</commandlineTool>
-          <preprocessorList>
-            <Elem>TLV_DEBUG=1</Elem>
-          </preprocessorList>
           <useLinkerLibraries>false</useLinkerLibraries>
           <warningLevel>2</warningLevel>
         </cTool>
-        <ccTool>
-          <preprocessorList>
-            <Elem>DEBUG=1</Elem>
-          </preprocessorList>
-        </ccTool>
         <linkerTool>
           <commandlineTool>g++</commandlineTool>
         </linkerTool>

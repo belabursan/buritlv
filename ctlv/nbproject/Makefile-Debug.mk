@@ -65,7 +65,7 @@ ${CND_DISTDIR}/${CND_CONF}/${CND_PLATFORM}/libctlv.${CND_DLIB_EXT}: ${OBJECTFILE
 ${OBJECTDIR}/tlv.o: tlv.c
 	${MKDIR} -p ${OBJECTDIR}
 	${RM} "$@.d"
-	$(COMPILE.c) -g -Wall -DTLV_DEBUG=1 -std=c99 -fPIC  -MMD -MP -MF "$@.d" -o ${OBJECTDIR}/tlv.o tlv.c
+	$(COMPILE.c) -g -Wall -std=c99 -fPIC  -MMD -MP -MF "$@.d" -o ${OBJECTDIR}/tlv.o tlv.c
 
 # Subprojects
 .build-subprojects:

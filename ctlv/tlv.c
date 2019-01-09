@@ -1,9 +1,7 @@
 #include "tlv.h"
 #include <stdio.h>
 #include <string.h>
-#ifdef TLV_DEBUG
 #include <stdarg.h>
-#endif
 
 
 /********** PRIVATE DECLARATIONS **********************************************/
@@ -62,7 +60,17 @@ static bool set_header(const tlv_t *tlv, uint8_t *array, uint32_t *index, const 
  */
 static bool to_byte_array(const tlv_t *tlv, uint8_t **array, uint32_t *index, const size_t length);
 
-#ifdef TLV_DEBUG
+
+/**
+ * @brief Converts an array of bytes to a Tlv structure
+ * @param tlv Return point of the converted Tlv
+ * @param bytes Bytes to convert
+ * @param length Length of the array
+ * @return rue if conversion succeeded, false otherwise
+ */
+static bool array_to_tlv(tlv_t **tlv, uint8_t **bytes, tlv_length_t *length);
+
+
 /**
  * @brief Returns the string representation of a tlv object
  *
@@ -74,7 +82,21 @@ static bool to_byte_array(const tlv_t *tlv, uint8_t **array, uint32_t *index, co
  */
 static bool to_string(const tlv_t *tlv, char *str, size_t size, tlv_level_t level);
 
-#endif
+
+/**
+ * Converts bytes from an array to a tlv-tag
+ * @param array Array with bytes
+ * @return  tlv tag;
+ */
+static tlv_tag_t array_to_tlv_tag(uint8_t *array);
+
+
+/**
+ * Converts bytes whitin an array to tlv-length
+ * @param array array with bytes
+ * @return tlv-length
+ */
+static tlv_length_t array_to_tlv_length(uint8_t *array);
 
 
 /********** PUBLIC DEFINITIONS ************************************************/
@@ -82,9 +104,7 @@ tlv_t* tlv_new_cdo(const tlv_tag_t tag) {
     tlv_t *tlv;
 
     if ((tlv = tlv_new()) == NULL) {
-#ifdef TLV_DEBUG
         tlv_debug_cb("Error - Failed to create CDO");
-#endif
         return NULL;
     }
     tlv->type = TLV_CDO;
@@ -94,13 +114,11 @@ tlv_t* tlv_new_cdo(const tlv_tag_t tag) {
 }
 
 
-tlv_t*tlv_new_pdo(const tlv_tag_t tag, const tlv_length_t length, uint8_t *value) {
+tlv_t* tlv_new_pdo(const tlv_tag_t tag, const tlv_length_t length, uint8_t *value) {
     tlv_t*tlv;
 
     if ((tlv = tlv_new()) == NULL) {
-#ifdef TLV_DEBUG
         tlv_debug_cb("Error - Failed to create PDO");
-#endif
         return NULL;
     }
 
@@ -121,9 +139,7 @@ tlv_t* tlv_append_next(tlv_t *tlv, tlv_t *next) {
             tmp = tmp->next;
         }
         tmp->next = next;
-#ifdef TLV_DEBUG
         next->level = tmp->level;
-#endif
         return next;
     }
 
@@ -134,9 +150,7 @@ tlv_t* tlv_append_next(tlv_t *tlv, tlv_t *next) {
 tlv_t* tlv_append_child(tlv_t *tlv, tlv_t*child) {
     if (tlv && child) {
         if (tlv->type != TLV_CDO) {
-#ifdef TLV_DEBUG
             tlv_debug_cb("Error - Cannot append child. Tlv is not CDO");
-#endif
             return NULL;
         }
 
@@ -148,9 +162,7 @@ tlv_t* tlv_append_child(tlv_t *tlv, tlv_t*child) {
 
         return child;
     }
-#ifdef TLV_DEBUG
     tlv_debug_cb("Error - Append failed, argument is null");
-#endif
     return NULL;
 }
 
@@ -215,14 +227,10 @@ bool tlv_to_byte_array(tlv_t *tlv, uint8_t **barray, size_t *size) {
                 *size = length;
                 return true;
             }
-#ifdef TLV_DEBUG            
             tlv_debug_cb("Fatal - Failed to allocate memory for array");
-#endif
             return false;
         }
-#ifdef TLV_DEBUG
         tlv_debug_cb("Error - Failed to get size of the object");
-#endif
         return false;
     }
 
@@ -230,7 +238,24 @@ bool tlv_to_byte_array(tlv_t *tlv, uint8_t **barray, size_t *size) {
 }
 
 
-#ifdef TLV_DEBUG
+tlv_t* tlv_from_byte_array(const uint8_t *barray, const size_t size) {
+    tlv_t *tlv = NULL;
+
+    if (barray != NULL && size >= BER_HEADER_BYTE_LENGTH ) {
+            if (size > 65535) {
+        tlv_debug_cb("ERROR - Too long array: %u", size);
+        return tlv;
+    }
+        uint8_t *bytes = (uint8_t*) barray;
+        tlv_length_t length = (tlv_length_t)size;
+        if (!array_to_tlv(&tlv, &bytes, &length)) {
+            tlv_debug_cb("ERROR - Converting to tlv failed");
+        }
+    }
+
+    return tlv;
+}
+
 
 
 const char* tlv_to_string(const tlv_t *tlv) {
@@ -264,7 +289,6 @@ void __attribute__ ((weak)) tlv_debug_cb(const char *txt, ...) {
     va_end(args);
 }
 
-#endif
 
 
 /********** PRIVATE DEFINITIONS ***********************************************/
@@ -273,9 +297,7 @@ static tlv_t* tlv_new(void) {
 
     tlv = (tlv_t*) malloc(sizeof (*tlv));
     if (tlv == NULL) {
-#ifdef TLV_DEBUG
         tlv_debug_cb("Fatal - Out of memory");
-#endif
         return NULL;
     }
 
@@ -290,9 +312,7 @@ static tlv_t* tlv_reset(tlv_t *tlv) {
     tlv->tag = 0;
     tlv->value = NULL;
     tlv->type = TLV_NOT_SET;
-#ifdef TLV_DEBUG
     tlv->level = 0;
-#endif
 
     return tlv;
 }
@@ -301,21 +321,15 @@ static tlv_t* tlv_reset(tlv_t *tlv) {
 static tlv_t* tlv_set_child(tlv_t *tlv, tlv_t *child) {
     if (tlv && child) {
         if (tlv->type != TLV_CDO) {
-#ifdef TLV_DEBUG
             tlv_debug_cb("Error - Set_child failed. Tlv is not CDO");
-#endif            
             return NULL;
         }
         if (tlv->child != NULL) {
-#ifdef TLV_DEBUG
             tlv_debug_cb("Warning - Deleting already existing child");
-#endif            
             tlv_delete(&tlv->child);
         }
         tlv->child = child;
-#ifdef TLV_DEBUG
         child->level = tlv->level + 1;
-#endif
         return child;
     }
 
@@ -351,9 +365,7 @@ static bool get_total_length(const tlv_t *tlv, size_t *length) {
 
 static bool set_header(const tlv_t *tlv, uint8_t *array, uint32_t *index, const size_t length) {
     if (*index + BER_HEADER_BYTE_LENGTH > length) {
-#ifdef TLV_DEBUG
         tlv_debug_cb("Error - not enough room for tlv header");
-#endif
         return false;
     }
 
@@ -392,7 +404,61 @@ static bool to_byte_array(const tlv_t *tlv, uint8_t **array, uint32_t *index, co
     return false;
 }
 
-#ifdef TLV_DEBUG
+
+static bool array_to_tlv(tlv_t **tlv, uint8_t **bytes, tlv_length_t *length) {
+    uint8_t *header = *bytes;
+    bool ret_value = true;
+    tlv_length_t value_length = 0;
+
+    if (*length == 0) {
+        // Nothing to do
+        *tlv = NULL;
+        return ret_value;
+    }
+
+    if (*length < BER_HEADER_BYTE_LENGTH || *bytes == NULL) {
+        tlv_debug_cb("ERROR - Failed to deserialize, wrong length");
+        return false;
+    }
+
+    value_length = array_to_tlv_length(&header[3]);
+
+    *bytes += BER_HEADER_BYTE_LENGTH;
+    *length -= BER_HEADER_BYTE_LENGTH;
+
+    if (header[0] == TLV_PDO) {
+        *tlv = tlv_new_pdo(array_to_tlv_tag(&header[1]), value_length, NULL);
+        (*tlv)->value = malloc(value_length);
+        if ((*tlv)->value == NULL) {
+            tlv_debug_cb("FATAL - Out of memory when allocating (*tlv)->value");
+            return false;
+        }
+        memcpy((*tlv)->value, *bytes, value_length);
+
+        *bytes += value_length;
+        *length -= value_length;
+    } else {
+        *tlv = tlv_new_cdo(array_to_tlv_tag(&header[1]));
+        if (value_length > 0) {
+            *length -= value_length;
+            ret_value = array_to_tlv(&(*tlv)->child, bytes, &value_length);
+            if (ret_value == false) {
+                tlv_debug_cb("ERROR - Failed to deserialize cdo->child");
+                return ret_value;
+            }
+        }
+    }
+
+    if (*length > 0) {
+        ret_value = array_to_tlv(&(*tlv)->next, bytes, length);
+        if (ret_value == false) {
+            tlv_debug_cb("ERROR - Failed to deserialize tlv->next");
+            return ret_value;
+        }
+    }
+
+    return ret_value;
+}
 
 
 static bool to_string(const tlv_t *tlv, char *str, size_t size, tlv_level_t level) {
@@ -445,4 +511,12 @@ static bool to_string(const tlv_t *tlv, char *str, size_t size, tlv_level_t leve
     return true;
 }
 
-#endif
+
+static tlv_tag_t array_to_tlv_tag(uint8_t *array) {
+    return (array[0] << 8 | array[1]);
+}
+
+
+static tlv_length_t array_to_tlv_length(uint8_t *array) {
+    return (array[0] << 8 | array[1]);
+}

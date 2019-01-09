@@ -6,7 +6,7 @@
  *
  * Created on October 12, 2016, 9:23 AM
  *
- * There is no licence, use it as you wish.
+ * There is no license, use it as you wish.
  *
  * @brief This is an implementation of a special type of TLV parser
  * TLV stands for Tag-Length-Value which is an encoding scheme used for optional information element in a certain protocol
@@ -60,9 +60,7 @@ extern "C" {
     typedef uint16_t tlv_tag_t;
     typedef uint16_t tlv_length_t;
     typedef uint8_t tlv_type_t;
-#ifdef TLV_DEBUG
     typedef uint16_t tlv_level_t;
-#endif
     static const uint8_t BER_HEADER_BYTE_LENGTH = 5; // 1 byte type, 2 bytes tag(uint16_t) and 2 bytes length(uint16_t)
 
     /**
@@ -84,9 +82,7 @@ extern "C" {
         tlv_tag_t tag;          /**< @brief Tag of the TLV */
         tlv_length_t length;    /**< @brief Length of data in PDO's, total length of childs for CDO's */
         tlv_type_t type;        /**< @brief Type of the TLV (CDO/PDO) */
-#ifdef TLV_DEBUG
         tlv_level_t level;      /**< @brief Level, used when (debug) printing the TLV */
-#endif
     };
 
 
@@ -161,10 +157,14 @@ extern "C" {
     bool tlv_to_byte_array(tlv_t *tlv, uint8_t **barray, size_t *size);
 
 
-    //tlv_t* tlv_from_byte_array(uint8_t *barray, size_t size);
+    /**
+     * @brief Converts a byte array to a TLV object
+     * @param[in] barray Byte array to convert
+     * @param[in] size The size of the byte array
+     * @return TLV object converted from the byte array or NULL if conversion failed
+     */
+    tlv_t* tlv_from_byte_array(const uint8_t *barray, const size_t size);
 
-
-#ifdef TLV_DEBUG   
 
     /**
      * Returns the string representation of the tlv object
@@ -184,8 +184,6 @@ extern "C" {
      * @param[in] ... Variable length arguments
      */
     extern void tlv_debug_cb(const char *txt, ...);
-
-#endif /* TLV_DEBUG */
 
 #ifdef __cplusplus
 }
