@@ -1,5 +1,6 @@
 #ifndef TLV_H_2016
 #define TLV_H_2016
+
 /**
  * File:   tlv.h
  * Author: Bela Bursan
@@ -67,9 +68,9 @@ extern "C" {
      * Represents the types of a TLV object
      */
     typedef enum {
-        TLV_NOT_SET = 0, /**< @brief Not set */
-        TLV_CDO = 0xFA, /**< @brief CDO - Constructed Data Object, acts as a directory contains other CDO's or PDO's, cannot hold data(value) */
-        TLV_PDO = 0xBA /**< @brief PDO - Primitive Data Object, can only hold data (value) */
+        TLV_NOT_SET = 0,        /**< @brief Not set */
+        TLV_CDO = 0xFA,         /**< @brief CDO - Constructed Data Object, acts as a directory contains other CDO's or PDO's, cannot hold data(value) */
+        TLV_PDO = 0xBA          /**< @brief PDO - Primitive Data Object, can only hold data (value) */
     } tlv_types_t;
 
     /**
@@ -154,7 +155,7 @@ extern "C" {
      * @param[out] size Size of the returned byte array
      * @return True if successful, false otherwise
      */
-    bool tlv_to_byte_array(tlv_t *tlv, uint8_t **barray, size_t *size);
+    bool tlv_to_byte_array(const tlv_t *tlv, uint8_t **barray, size_t *size);
 
 
     /**
@@ -168,7 +169,7 @@ extern "C" {
 
     /**
      * Returns the string representation of the tlv object
-     * Note: the returned string is dynamically allocated and must be "freed" after use
+     * Note: the returned string is dynamically allocated and must be released (free) after use
      * 
      * @param[in] tlv Tlv object to "stringify"
      * @return The string or null
@@ -178,7 +179,7 @@ extern "C" {
 
     /**
      * Callback function for debug information
-     * Note: This function is defined as weak, override is possible
+     * Note: This function is defined with the weak attribute, hence override is possible
      * 
      * @param[in] txt Debug text
      * @param[in] ... Variable length arguments

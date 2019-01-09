@@ -3,6 +3,8 @@
 #include <string.h>
 #include <stdarg.h>
 
+#define LINE_END "\n"
+
 
 /********** PRIVATE DECLARATIONS **********************************************/
 /**
@@ -17,6 +19,7 @@ static tlv_t* tlv_new(void);
  * @brief Resets a tlv object
  * All members will be set to defaults like NULL and 0
  * @param[in] tlv Tlv object to reset
+ * @return Pointer to reseted Tlv
  */
 static tlv_t* tlv_reset(tlv_t *tlv);
 
@@ -63,10 +66,10 @@ static bool to_byte_array(const tlv_t *tlv, uint8_t **array, uint32_t *index, co
 
 /**
  * @brief Converts an array of bytes to a Tlv structure
- * @param tlv Return point of the converted Tlv
- * @param bytes Bytes to convert
- * @param length Length of the array
- * @return rue if conversion succeeded, false otherwise
+ * @param[out] tlv Return point of the converted Tlv
+ * @param[in] bytes Bytes to convert
+ * @param[in] length Length of the array
+ * @return True if conversion succeeded, false otherwise
  */
 static bool array_to_tlv(tlv_t **tlv, uint8_t **bytes, tlv_length_t *length);
 
@@ -78,22 +81,22 @@ static bool array_to_tlv(tlv_t **tlv, uint8_t **bytes, tlv_length_t *length);
  * @param[out] str Pointer to string to be filled with the representation of the tlv object
  * @param[in] size Length of the string
  * @param[in] level Corresponds to the level of the TLV object in the thread structure
- * @return ++++++++++++True or False in case of the string is truncated by "snprintf()"
+ * @return True if printing is succeeded, False in case of the string is truncated by <code>snprintf()</code>
  */
 static bool to_string(const tlv_t *tlv, char *str, size_t size, tlv_level_t level);
 
 
 /**
  * Converts bytes from an array to a tlv-tag
- * @param array Array with bytes
- * @return  tlv tag;
+ * @param[in] array Array with bytes
+ * @return tlv tag;
  */
 static tlv_tag_t array_to_tlv_tag(uint8_t *array);
 
 
 /**
  * Converts bytes whitin an array to tlv-length
- * @param array array with bytes
+ * @param[in] array array with bytes
  * @return tlv-length
  */
 static tlv_length_t array_to_tlv_length(uint8_t *array);
@@ -212,7 +215,7 @@ void tlv_delete_all(tlv_t **tlv) {
 }
 
 
-bool tlv_to_byte_array(tlv_t *tlv, uint8_t **barray, size_t *size) {
+bool tlv_to_byte_array(const tlv_t *tlv, uint8_t **barray, size_t *size) {
     size_t length = 0;
     if (barray != NULL && size != NULL) {
         if (get_total_length(tlv, &length)) {
@@ -241,13 +244,13 @@ bool tlv_to_byte_array(tlv_t *tlv, uint8_t **barray, size_t *size) {
 tlv_t* tlv_from_byte_array(const uint8_t *barray, const size_t size) {
     tlv_t *tlv = NULL;
 
-    if (barray != NULL && size >= BER_HEADER_BYTE_LENGTH ) {
-            if (size > 65535) {
-        tlv_debug_cb("ERROR - Too long array: %u", size);
-        return tlv;
-    }
+    if (barray != NULL && size >= BER_HEADER_BYTE_LENGTH) {
+        if (size > 65535) {
+            tlv_debug_cb("ERROR - Too long array: %u", size);
+            return tlv;
+        }
         uint8_t *bytes = (uint8_t*) barray;
-        tlv_length_t length = (tlv_length_t)size;
+        tlv_length_t length = (tlv_length_t) size;
         if (!array_to_tlv(&tlv, &bytes, &length)) {
             tlv_debug_cb("ERROR - Converting to tlv failed");
         }
@@ -255,7 +258,6 @@ tlv_t* tlv_from_byte_array(const uint8_t *barray, const size_t size) {
 
     return tlv;
 }
-
 
 
 const char* tlv_to_string(const tlv_t *tlv) {
@@ -285,10 +287,9 @@ void __attribute__ ((weak)) tlv_debug_cb(const char *txt, ...) {
     va_list args;
     va_start(args, txt);
     vprintf(txt, args);
-    printf("\n");
+    printf(LINE_END);
     va_end(args);
 }
-
 
 
 /********** PRIVATE DEFINITIONS ***********************************************/
@@ -443,7 +444,7 @@ static bool array_to_tlv(tlv_t **tlv, uint8_t **bytes, tlv_length_t *length) {
             *length -= value_length;
             ret_value = array_to_tlv(&(*tlv)->child, bytes, &value_length);
             if (ret_value == false) {
-                tlv_debug_cb("ERROR - Failed to deserialize cdo->child");
+                tlv_debug_cb("ERROR - Failed to convert cdo->child");
                 return ret_value;
             }
         }
@@ -452,7 +453,7 @@ static bool array_to_tlv(tlv_t **tlv, uint8_t **bytes, tlv_length_t *length) {
     if (*length > 0) {
         ret_value = array_to_tlv(&(*tlv)->next, bytes, length);
         if (ret_value == false) {
-            tlv_debug_cb("ERROR - Failed to deserialize tlv->next");
+            tlv_debug_cb("ERROR - Failed to convert tlv->next");
             return ret_value;
         }
     }
